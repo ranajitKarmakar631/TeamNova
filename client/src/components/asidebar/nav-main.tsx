@@ -3,9 +3,12 @@
 import {
   LucideIcon,
   Settings,
-  Users,
+  UsersRound,
+  Backpack,
   CheckCircle,
+  UserRound,
   LayoutDashboard,
+  Send,
 } from "lucide-react";
 import {
   SidebarGroup,
@@ -43,6 +46,16 @@ export function NavMain() {
       icon: LayoutDashboard,
     },
     {
+      title: "Projects",
+      url: `/workspace/${workspaceId}/projects`,
+      icon: Backpack,
+    },
+    {
+      title: "Teams",
+      url: `/workspace/${workspaceId}/teams`,
+      icon: UsersRound  ,
+    },
+    {
       title: "Tasks",
       url: `/workspace/${workspaceId}/tasks`,
       icon: CheckCircle,
@@ -50,9 +63,13 @@ export function NavMain() {
     {
       title: "Members",
       url: `/workspace/${workspaceId}/members`,
-      icon: Users,
+      icon: UserRound,
     },
-
+    {
+      title: "Send Invite",
+      url: `/workspace/${workspaceId}/send-invite`,
+      icon: Send,
+    },
     ...(canManageSettings
       ? [
           {

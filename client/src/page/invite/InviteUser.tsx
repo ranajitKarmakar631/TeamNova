@@ -11,8 +11,11 @@ import Logo from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { BASE_ROUTE } from "@/routes/common/routePaths";
 import useAuth from "@/hooks/api/use-auth";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { invitedUserJoinWorkspaceMutationFn } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  getInviteDetailsQueryFn,
+  invitedUserJoinWorkspaceMutationFn,
+} from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 
 const InviteUser = () => {
@@ -22,8 +25,16 @@ const InviteUser = () => {
   const param = useParams();
   const inviteCode = param.inviteCode as string;
 
-  const { data: authData, isPending } = useAuth();
+  const { data: authData, isPending: isAuthPending } = useAuth();
   const user = authData?.user;
+
+  const { data: inviteDetails } =
+    useQuery({
+      queryKey: ["inviteDetails", inviteCode],
+      queryFn: () => getInviteDetailsQueryFn(inviteCode),
+      enabled: !!inviteCode,
+      retry: false,
+    });
 
   const { mutate, isPending: isLoading } = useMutation({
     mutationFn: invitedUserJoinWorkspaceMutationFn,
@@ -40,6 +51,9 @@ const InviteUser = () => {
         queryClient.resetQueries({
           queryKey: ["userWorkspaces"],
         });
+        queryClient.invalidateQueries({
+          queryKey: ["authUser"],
+        });
         navigate(`/workspace/${data.workspaceId}`);
       },
       onError: (error) => {
@@ -51,6 +65,9 @@ const InviteUser = () => {
       },
     });
   };
+
+  const inviterName = inviteDetails?.inviter?.name;
+  const roleName = inviteDetails?.role;
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
@@ -66,15 +83,20 @@ const InviteUser = () => {
           <Card>
             <CardHeader className="text-center">
               <CardTitle className="text-xl">
-                Hey there! You're invited to join a TaskNova Workspace!
+                {inviteDetails?.workspace?.name
+                  ? `Join ${inviteDetails.workspace.name}`
+                  : "You're invited to join a TaskNova Workspace!"}
               </CardTitle>
               <CardDescription>
-                Looks like you need to be logged into your TaskNova account to
-                join this Workspace.
+                {inviterName
+                  ? `${inviterName} has invited you to join this workspace${
+                      roleName ? ` as ${roleName}` : ""
+                    }.`
+                  : "You need to be logged into your TaskNova account to join this Workspace."}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isPending ? (
+              {isAuthPending ? (
                 <Loader className="!w-11 !h-11 animate-spin place-self-center flex" />
               ) : (
                 <div>

@@ -21,13 +21,15 @@ import {
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/logo";
 import GoogleOauthButton from "@/components/auth/google-oauth-button";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { loginMutationFn } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
+import { PROTECTED_ROUTES } from "@/routes/common/routePaths";
 
 const SignIn = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const returnUrl = searchParams.get("returnUrl");
 
@@ -57,10 +59,24 @@ const SignIn = () => {
 
     mutate(values, {
       onSuccess: (data) => {
+        queryClient.invalidateQueries({
+          queryKey: ["authUser"],
+        });
         const user = data.user;
-        console.log(user);
         const decodedUrl = returnUrl ? decodeURIComponent(returnUrl) : null;
-        navigate(decodedUrl || `/workspace/${user.currentWorkspace}`);
+        const currentWorkspace = user?.currentWorkspace;
+        const workspaceId =
+          typeof currentWorkspace === "string"
+            ? currentWorkspace
+            : (currentWorkspace as any)?._id;
+
+        // if user do not have any workspace then redirect to CREATE_WORKSPACE
+        // if user have workspace then redirect to /workspace/:workspaceId
+        if (!workspaceId) {
+          navigate(PROTECTED_ROUTES.CREATE_WORKSPACE);
+        } else {
+          navigate(decodedUrl || `/workspace/${workspaceId}`);
+        }
       },
       onError: (error) => {
         toast({

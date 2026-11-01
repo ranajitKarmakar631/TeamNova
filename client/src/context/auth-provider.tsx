@@ -1,24 +1,39 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createContext, useContext, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useCallback } from "react";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useAuth from "@/hooks/api/use-auth";
-import { UserType, WorkspaceType } from "@/types/api.type";
+import { AssociationType, UserType, WorkspaceWithMembersType } from "@/types/api.type";
 import useGetWorkspaceQuery from "@/hooks/api/use-get-workspace";
 import { useNavigate } from "react-router-dom";
-import usePermissions from "@/hooks/use-permissions";
 import { PermissionType } from "@/constant";
+import useGetMyAssociations from "@/hooks/api/use-get-my-associations";
+import usePermissions from "@/hooks/use-permissions";
+import { useAppDispatch } from "@/redux/store";
+import {
+  checkHasPermission,
+  PermissionScope,
+  syncAuthData,
+} from "@/redux/features/auth/authSlice";
+
+export type { PermissionScope };
 
 // Define the context shape
-type AuthContextType = {
-  user?: UserType;
-  workspace?: WorkspaceType;
-  hasPermission: (permission: PermissionType) => boolean;
+export type AuthContextType = {
+  user?: UserType | null;
+  workspace?: WorkspaceWithMembersType | any;
+  associations: AssociationType[];
+  permissions: PermissionType[];
+  hasPermission: (
+    permission: PermissionType,
+    scope?: PermissionScope
+  ) => boolean;
   error: any;
   isLoading: boolean;
   isFetching: boolean;
   workspaceLoading: boolean;
   refetchAuth: () => void;
   refetchWorkspace: () => void;
+  refetchAssociations: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,12 +43,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const navigate = useNavigate();
   const workspaceId = useWorkspaceId();
+  const dispatch = useAppDispatch();
 
+  // Fetch queries
   const {
     data: authData,
     error: authError,
-    isLoading,
-    isFetching,
+    isLoading: isAuthLoading,
+    isFetching: isAuthFetching,
     refetch: refetchAuth,
   } = useAuth();
   const user = authData?.user;
@@ -44,37 +61,97 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     error: workspaceError,
     refetch: refetchWorkspace,
   } = useGetWorkspaceQuery(workspaceId);
-
   const workspace = workspaceData?.workspace;
 
+  const {
+    data: associationsData,
+    refetch: refetchAssociations,
+  } = useGetMyAssociations(workspaceId);
+  const associations = associationsData?.associations;
+
+  // Calculate permissions
+  const permissions = usePermissions(user, workspace);
+
+  // Sync state into Redux store (only when data changes)
+  useEffect(() => {
+    dispatch(
+      syncAuthData({
+        user: user || null,
+        workspace: workspace || null,
+        associations: associations || [],
+        isLoading: isAuthLoading,
+        isFetching: isAuthFetching,
+        workspaceLoading,
+        error: authError || workspaceError || null,
+      })
+    );
+  }, [
+    dispatch,
+    user,
+    workspace,
+    associations,
+    isAuthLoading,
+    isAuthFetching,
+    workspaceLoading,
+    authError,
+    workspaceError,
+  ]);
+
+  // Handle unauthorized error redirect
   useEffect(() => {
     if (workspaceError) {
       if (workspaceError?.errorCode === "ACCESS_UNAUTHORIZED") {
-        navigate("/"); // Redirect if the user is not a member of the workspace
+        navigate("/");
       }
     }
   }, [navigate, workspaceError]);
 
-  const permissions = usePermissions(user, workspace);
+  const hasPermission = useCallback(
+    (permission: PermissionType, scope?: PermissionScope): boolean => {
+      return checkHasPermission(
+        permissions,
+        associations || [],
+        permission,
+        scope
+      );
+    },
+    [permissions, associations]
+  );
 
-  const hasPermission = (permission: PermissionType): boolean => {
-    return permissions.includes(permission);
-  };
+  const contextValue: AuthContextType = useMemo(
+    () => ({
+      user,
+      workspace,
+      associations: associations || [],
+      permissions: [...permissions],
+      hasPermission,
+      error: authError || workspaceError || null,
+      isLoading: isAuthLoading,
+      isFetching: isAuthFetching,
+      workspaceLoading,
+      refetchAuth,
+      refetchWorkspace,
+      refetchAssociations,
+    }),
+    [
+      user,
+      workspace,
+      associations,
+      permissions,
+      hasPermission,
+      authError,
+      workspaceError,
+      isAuthLoading,
+      isAuthFetching,
+      workspaceLoading,
+      refetchAuth,
+      refetchWorkspace,
+      refetchAssociations,
+    ]
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        workspace,
-        hasPermission,
-        error: authError || workspaceError,
-        isLoading,
-        isFetching,
-        workspaceLoading,
-        refetchAuth,
-        refetchWorkspace,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
@@ -84,7 +161,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 export const useAuthContext = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useCurrentUserContext must be used within a AuthProvider");
+    throw new Error("useAuthContext must be used within an AuthProvider");
   }
   return context;
 };
+
+export default AuthProvider;

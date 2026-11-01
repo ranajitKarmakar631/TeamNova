@@ -9,7 +9,7 @@ flowchart LR
   Browser[Browser]
   UI[React + Vite client\nReact Router / React Query]
   API[Express + TypeScript API\n/api routes]
-  Auth[Passport Local + cookie-session]
+  Auth[JWT Access & Refresh Tokens]
   Mongo[(MongoDB via Mongoose)]
   Browser --> UI
   UI -->|Axios JSON requests\ncredentials included| API
@@ -17,7 +17,7 @@ flowchart LR
   API --> Mongo
 ```
 
-The client and backend are separate applications with their own package manifests. The client is served by Vite during development and calls the backend using `VITE_API_BASE_URL`. The API defaults to port `5000` and route prefix `/api`; it enables credentialed CORS for the configured frontend origin. Authentication uses Passport's local strategy and a signed cookie session. MongoDB stores users, accounts, workspaces, memberships/roles, projects, and tasks.
+The client and backend are separate applications with their own package manifests. The client is served by Vite during development and calls the backend using `VITE_API_BASE_URL`. The API defaults to port `5000` and route prefix `/api`; it enables credentialed CORS for the configured frontend origin. Authentication uses JWT with short-lived Access Tokens (15 min) and rotating Refresh Tokens (7 days) via HTTP-only cookies and Bearer tokens. MongoDB stores users, accounts, workspaces, memberships/roles, projects, and tasks.
 
 ## 2. Repository layout
 
@@ -54,9 +54,9 @@ The client and backend are separate applications with their own package manifest
 
 ### Startup and middleware
 
-`backend/src/index.ts` is the composition root. It loads environment variables, configures JSON and URL-encoded parsing, adds cookie-session and Passport, enables CORS, registers the health endpoint, mounts feature routers, installs the centralized error handler, starts the HTTP listener, and connects to MongoDB.
+`backend/src/index.ts` is the composition root. It loads environment variables, configures JSON and URL-encoded parsing, adds cookie-parser, enables CORS, registers the health endpoint, mounts feature routers, installs the centralized error handler, starts the HTTP listener, and connects to MongoDB.
 
-The default API prefix is `/api`. Routes under `/api/auth` are public for registration, login, and logout. The `/api/user`, `/api/workspace`, `/api/member`, `/api/project`, and `/api/task` routers are mounted behind `isAuthenticated`.
+The default API prefix is `/api`. Routes under `/api/auth` are public for registration, login, token refresh, and logout. The `/api/user`, `/api/workspace`, `/api/member`, `/api/project`, and `/api/task` routers are mounted behind `isAuthenticated`.
 
 ### Feature module pattern
 
@@ -77,16 +77,20 @@ The current modules are `auth`, `user`, `workspace`, `member`, `project`, and `t
 
 - `common/middlewares/asyncHandler.middleware.ts` forwards rejected async handlers to Express error processing.
 - `common/middlewares/errorHandler.middleware.ts` normalizes API errors.
-- `common/middlewares/isAuthenticated.middleware.ts` checks the Passport session before protected routers run.
+- `common/middlewares/isAuthenticated.middleware.ts` verifies JWT access tokens (from cookies or Bearer Authorization headers) and attaches the authenticated user.
 - `common/enums/` defines role names, permissions, and API error codes.
-- `common/utils/` contains password hashing, role/permission lookup and guards, environment access, UUID helpers, and application errors.
-- `config/app.config.ts` reads server settings; `database.config.ts` opens the Mongoose connection; `passport.config.ts` configures local authentication.
+- `common/utils/` contains password hashing, JWT generation/verification, role/permission lookup and guards, environment access, UUID helpers, and application errors.
+- `config/app.config.ts` reads server settings and JWT configuration; `database.config.ts` opens the Mongoose connection.
 - `config/redis.config.ts` exists as a Redis configuration module. The current server entry point does not wire it into request processing.
 - `seeders/role.seeder.ts` initializes role documents and their permission arrays.
 
 ### Authentication and authorization
 
-The local Passport strategy authenticates using email and password. On successful login, Passport serializes the authenticated user into the `cookie-session` session. The browser sends that cookie on Axios requests because the client sets `withCredentials: true` and the server allows credentials from `FRONTEND_ORIGIN`.
+Authentication uses JSON Web Tokens (JWT) with dual tokens:
+1. **Access Token**: Short-lived token (15 minutes) signed with `JWT_ACCESS_SECRET` containing `{ userId }`. Transmitted via HTTP-only cookie or Bearer authorization header.
+2. **Refresh Token**: Long-lived token (7 days) signed with `JWT_REFRESH_SECRET` and persisted in MongoDB `Account` collection. Transmitted via HTTP-only cookie and rotated on refresh.
+
+On successful login, the server sets HTTP-only `accessToken` and `refreshToken` cookies and returns token payloads. On token expiration, the client interceptor automatically hits `/api/auth/refresh` to rotate tokens silently without interrupting user activity.
 
 Authentication is enforced at the protected API router boundary. Workspace roles and permissions are represented by role and membership data; backend helper utilities support role checks. The client also loads the current user and selected workspace, derives permissions, and uses route/component guards to shape the UI. Server-side checks remain the security boundary.
 
@@ -96,7 +100,7 @@ All paths below are relative to `BASE_PATH` (default `/api`):
 
 | Router | Example operations |
 | --- | --- |
-| `/auth` | `POST /register`, `POST /login`, `POST /logout` |
+| `/auth` | `POST /register`, `POST /login`, `POST /refresh`, `POST /logout` |
 | `/user` | `GET /current` |
 | `/workspace` | Create/update/delete workspaces, list user workspaces, fetch workspace details, members, analytics, change member role |
 | `/member` | Join workspace using an invite code |
@@ -163,18 +167,23 @@ sequenceDiagram
   actor User
   participant UI as React client
   participant API as Express API
-  participant Passport
   participant DB as MongoDB
   User->>UI: Submit email/password
   UI->>API: POST /api/auth/login (credentials enabled)
-  API->>Passport: Verify local strategy
-  Passport->>DB: Find account/user and validate password
-  DB-->>Passport: User record
-  Passport-->>API: Authenticated user
-  API-->>UI: Session cookie + response
-  UI->>API: GET /api/user/current
-  API->>API: isAuthenticated middleware
+  API->>DB: Find account/user and validate password
+  DB-->>API: Validated user
+  API->>API: Generate Access Token (JWT) & Refresh Token (JWT)
+  API->>DB: Store hashed/active refresh token in Account
+  API-->>UI: Set HTTP-only cookies (accessToken, refreshToken) + JSON response
+  UI->>API: GET /api/user/current (includes accessToken cookie)
+  API->>API: isAuthenticated middleware (verifies JWT)
   API-->>UI: Current user
+  Note over UI,API: When accessToken expires (401):
+  UI->>API: POST /api/auth/refresh (includes refreshToken cookie)
+  API->>DB: Verify refresh token against Account
+  API->>API: Issue new Access Token & rotated Refresh Token
+  API-->>UI: Set new HTTP-only cookies
+  UI->>API: Retry original request
 ```
 
 ### Workspace task data

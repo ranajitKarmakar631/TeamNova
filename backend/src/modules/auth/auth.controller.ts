@@ -1,72 +1,90 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import { asyncHandler } from "../../common/middlewares/asyncHandler.middleware";
-import { registerSchema } from "./auth.validation";
+import { loginSchema, registerSchema } from "./auth.validation";
 import { HTTPSTATUS } from "../../config/http.config";
-import { registerUserService } from "./auth.service";
-import passport from "passport";
+import {
+  loginUserService,
+  logoutUserService,
+  refreshTokenService,
+  registerUserService,
+} from "./auth.service";
+import { clearAuthCookies, setAuthCookies } from "../../common/utils/jwt";
 
 export const registerUserController = asyncHandler(
   async (req: Request, res: Response) => {
+    console.log("This is you body", req.body);
     const body = registerSchema.parse({
       ...req.body,
     });
 
-    await registerUserService(body);
+    const result = await registerUserService(body);
+
+    setAuthCookies(res, result.accessToken, result.refreshToken);
 
     return res.status(HTTPSTATUS.CREATED).json({
       message: "User created successfully",
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     });
   }
 );
 
 export const loginController = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {
-    passport.authenticate(
-      "local",
-      (
-        err: Error | null,
-        user: Express.User | false,
-        info: { message: string } | undefined
-      ) => {
-        if (err) {
-          return next(err);
-        }
+  async (req: Request, res: Response) => {
+    const body = loginSchema.parse({
+      ...req.body,
+    });
 
-        if (!user) {
-          return res.status(HTTPSTATUS.UNAUTHORIZED).json({
-            message: info?.message || "Invalid email or password",
-          });
-        }
+    const result = await loginUserService(body);
 
-        req.logIn(user, (err) => {
-          if (err) {
-            return next(err);
-          }
+    setAuthCookies(res, result.accessToken, result.refreshToken);
 
-          return res.status(HTTPSTATUS.OK).json({
-            message: "Logged in successfully",
-            user,
-          });
-        });
-      }
-    )(req, res, next);
+    return res.status(HTTPSTATUS.OK).json({
+      message: "Logged in successfully",
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    });
+  }
+);
+
+export const refreshTokenController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const refreshToken =
+      req.cookies?.refreshToken ||
+      req.body?.refreshToken ||
+      (req.headers["x-refresh-token"] as string);
+
+    const result = await refreshTokenService(refreshToken);
+
+    setAuthCookies(res, result.accessToken, result.refreshToken);
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: "Access token refreshed successfully",
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      user: result.user,
+    });
   }
 );
 
 export const logOutController = asyncHandler(
   async (req: Request, res: Response) => {
-    req.logout((err) => {
-      if (err) {
-        console.error("Logout error:", err);
-        return res
-          .status(HTTPSTATUS.INTERNAL_SERVER_ERROR)
-          .json({ error: "Failed to log out" });
-      }
+    const refreshToken =
+      req.cookies?.refreshToken ||
+      req.body?.refreshToken ||
+      (req.headers["x-refresh-token"] as string);
+
+    await logoutUserService({
+      refreshToken,
+      userId: req.user?._id?.toString(),
     });
 
-    req.session = null;
-    return res
-      .status(HTTPSTATUS.OK)
-      .json({ message: "Logged out successfully" });
+    clearAuthCookies(res);
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: "Logged out successfully",
+    });
   }
 );

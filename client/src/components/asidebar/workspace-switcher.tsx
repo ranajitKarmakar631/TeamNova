@@ -40,7 +40,7 @@ export function WorkspaceSwitcher() {
   const { data, isPending } = useQuery({
     queryKey: ["userWorkspaces"],
     queryFn: getAllWorkspacesUserIsMemberQueryFn,
-    staleTime: 1,
+    staleTime: 10 * 1000,
     refetchOnMount: true,
   });
 
@@ -53,7 +53,7 @@ export function WorkspaceSwitcher() {
         : workspaces[0];
 
       if (workspace) {
-        setActiveWorkspace(workspace);
+        setActiveWorkspace((prev) => (prev?._id === workspace._id ? prev : workspace));
         if (!workspaceId) navigate(`/workspace/${workspace._id}`);
       }
     }

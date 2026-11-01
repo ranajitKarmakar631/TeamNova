@@ -8,6 +8,7 @@ export interface AccountDocument extends Document {
   refreshToken: string | null;
   tokenExpiry: Date | null;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const accountSchema = new Schema<AccountDocument>(
@@ -16,6 +17,7 @@ const accountSchema = new Schema<AccountDocument>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
     provider: {
       type: String,
@@ -25,10 +27,15 @@ const accountSchema = new Schema<AccountDocument>(
     providerId: {
       type: String,
       required: true,
-      unique: true,
     },
-    refreshToken: { type: String, default: null },
-    tokenExpiry: { type: Date, default: null },
+    refreshToken: {
+      type: String,
+      default: null,
+    },
+    tokenExpiry: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -39,6 +46,8 @@ const accountSchema = new Schema<AccountDocument>(
     },
   }
 );
+
+accountSchema.index({ provider: 1, providerId: 1 }, { unique: true });
 
 const AccountModel = mongoose.model<AccountDocument>("Account", accountSchema);
 export default AccountModel;

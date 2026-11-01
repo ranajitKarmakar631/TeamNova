@@ -1,5 +1,4 @@
 import { Separator } from "@/components/ui/separator";
-import InviteMember from "@/components/workspace/member/invite-member";
 import AllMembers from "@/components/workspace/member/all-members";
 import WorkspaceHeader from "@/components/workspace/common/workspace-header";
 
@@ -21,8 +20,8 @@ export default function Members() {
           </div>
           <Separator className="my-4" />
 
-          <InviteMember />
-          <Separator className="my-4 !h-[0.5px]" />
+          {/* <InviteMember />
+          <Separator className="my-4 !h-[0.5px]" /> */}
 
           <AllMembers />
         </div>

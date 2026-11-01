@@ -15,16 +15,23 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "../../ui/textarea";
 import EmojiPickerComponent from "@/components/emoji-picker";
 import { ProjectType } from "@/types/api.type";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { editProjectMutationFn } from "@/lib/api";
+import { editProjectMutationFn, getAllTeamsQueryFn } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import { Loader } from "lucide-react";
+import { Loader, Users, X } from "lucide-react";
 
 export default function EditProjectForm(props: {
   project?: ProjectType;
@@ -35,8 +42,17 @@ export default function EditProjectForm(props: {
   const queryClient = useQueryClient();
 
   const [emoji, setEmoji] = useState("📊");
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
 
   const projectId = project?._id as string;
+
+  const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
+    queryKey: ["allteams", workspaceId],
+    queryFn: () => getAllTeamsQueryFn({ workspaceId, pageSize: 100 }),
+    enabled: Boolean(workspaceId),
+  });
+
+  const teams = teamsData?.teams || [];
 
   const formSchema = z.object({
     name: z.string().trim().min(1, {
@@ -62,6 +78,21 @@ export default function EditProjectForm(props: {
       setEmoji(project.emoji);
       form.setValue("name", project.name);
       form.setValue("description", project.description);
+
+      const initialTeamIds: string[] = [];
+      if (Array.isArray((project as any).teams)) {
+        (project as any).teams.forEach((t: any) => {
+          const id = t?._id || t;
+          if (id && !initialTeamIds.includes(id.toString())) {
+            initialTeamIds.push(id.toString());
+          }
+        });
+      }
+      const singleTeamId = (project.team as any)?._id || project.team;
+      if (singleTeamId && !initialTeamIds.includes(singleTeamId.toString())) {
+        initialTeamIds.push(singleTeamId.toString());
+      }
+      setSelectedTeamIds(initialTeamIds);
     }
   }, [form, project]);
 
@@ -74,12 +105,24 @@ export default function EditProjectForm(props: {
     const payload = {
       projectId,
       workspaceId,
-      data: { emoji, ...values },
+      data: {
+        emoji,
+        ...values,
+        teamIds: selectedTeamIds,
+      },
     };
     mutate(payload, {
       onSuccess: (data) => {
         queryClient.invalidateQueries({
           queryKey: ["singleProject", projectId],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ["project-overview", projectId],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ["project-teams", projectId],
         });
 
         queryClient.invalidateQueries({
@@ -154,6 +197,79 @@ export default function EditProjectForm(props: {
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Assigned Teams Section */}
+            <div className="mb-4 space-y-1.5">
+              <FormLabel className="dark:text-[#f1f7feb5] text-sm flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-primary" />
+                <span>Assigned Teams ({selectedTeamIds.length})</span>
+                <span className="text-xs text-muted-foreground font-normal">
+                  (Optional)
+                </span>
+              </FormLabel>
+
+              <div className="space-y-2">
+                {selectedTeamIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 p-2 rounded-lg border bg-muted/20">
+                    {selectedTeamIds.map((id) => {
+                      const team = teams.find((t) => t._id === id);
+                      return (
+                        <span
+                          key={id}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-primary/10 text-primary border border-primary/20"
+                        >
+                          <Users className="w-3 h-3" />
+                          <span>{team ? team.name : id}</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedTeamIds((prev) =>
+                                prev.filter((tid) => tid !== id)
+                              )
+                            }
+                            className="ml-0.5 hover:text-destructive"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <Select
+                  onValueChange={(val) => {
+                    if (val && !selectedTeamIds.includes(val)) {
+                      setSelectedTeamIds((prev) => [...prev, val]);
+                    }
+                  }}
+                  value=""
+                >
+                  <SelectTrigger className="!h-[44px]">
+                    <SelectValue
+                      placeholder={
+                        isLoadingTeams
+                          ? "Loading teams..."
+                          : teams.length === 0
+                          ? "No teams found"
+                          : selectedTeamIds.length > 0
+                          ? "Add another team..."
+                          : "Select teams to assign to this project"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams
+                      .filter((t) => !selectedTeamIds.includes(t._id))
+                      .map((t) => (
+                        <SelectItem key={t._id} value={t._id}>
+                          {t.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="mb-4">
               <FormField

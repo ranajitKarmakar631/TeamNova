@@ -8,6 +8,10 @@ import Settings from "@/page/workspace/Settings";
 import Tasks from "@/page/workspace/Tasks";
 import { AUTH_ROUTES, BASE_ROUTE, PROTECTED_ROUTES } from "./routePaths";
 import InviteUser from "@/page/invite/InviteUser";
+import Projects from "@/page/workspace/Projects";
+import Teams from "@/page/workspace/Teams";
+import TeamDetails from "@/page/workspace/TeamDetails";
+import SendInvite from "@/page/workspace/SendInvite";
 
 export const authenticationRoutePaths = [
   { path: AUTH_ROUTES.SIGN_IN, element: <SignIn /> },
@@ -20,8 +24,13 @@ export const protectedRoutePaths = [
   { path: PROTECTED_ROUTES.TASKS, element: <Tasks /> },
   { path: PROTECTED_ROUTES.MEMBERS, element: <Members /> },
   { path: PROTECTED_ROUTES.SETTINGS, element: <Settings /> },
-  { path: PROTECTED_ROUTES.PROJECT_DETAILS, element: <ProjectDetails /> },
+  { path: PROTECTED_ROUTES.PROJECT_DETAILS, element: <ProjectDetails /> },  
+  {path: PROTECTED_ROUTES.PROJECTS, element: <Projects />},
+  {path: PROTECTED_ROUTES.TEAMS, element: <Teams />},
+  {path: PROTECTED_ROUTES.TEAM_DETAILS, element: <TeamDetails />},
+  {path: PROTECTED_ROUTES.INVITE, element: <SendInvite />}
 ];
+
 
 export const baseRoutePaths = [
   { path: BASE_ROUTE.INVITE_URL, element: <InviteUser /> },

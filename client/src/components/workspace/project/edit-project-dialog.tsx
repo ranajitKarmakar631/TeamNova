@@ -4,22 +4,54 @@ import EditProjectForm from "./edit-project-form";
 import { ProjectType } from "@/types/api.type";
 import { useState } from "react";
 
-const EditProjectDialog = (props: { project?: ProjectType }) => {
-  const [isOpen, setIsOpen] = useState(false);
+interface EditProjectDialogProps {
+  project?: ProjectType;
+  isOpen?: boolean;
+  onClose?: () => void;
+  trigger?: React.ReactNode;
+}
 
-  const onClose = () => {
-    setIsOpen(false);
+const EditProjectDialog = ({
+  project,
+  isOpen: controlledOpen,
+  onClose: controlledOnClose,
+  trigger,
+}: EditProjectDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+
+  const handleOpenChange = (val: boolean) => {
+    if (isControlled) {
+      if (!val && controlledOnClose) controlledOnClose();
+    } else {
+      setInternalOpen(val);
+    }
   };
+
+  const handleClose = () => {
+    if (isControlled && controlledOnClose) {
+      controlledOnClose();
+    } else {
+      setInternalOpen(false);
+    }
+  };
+
   return (
     <div>
-      <Dialog modal={true} open={isOpen} onOpenChange={setIsOpen}>
-        <DialogTrigger className="mt-1.5" asChild>
-          <button>
-            <Edit3 className="w-5 h-5" />
-          </button>
-        </DialogTrigger>
+      <Dialog modal={true} open={open} onOpenChange={handleOpenChange}>
+        {!isControlled && (
+          <DialogTrigger className="mt-1.5" asChild>
+            {trigger || (
+              <button>
+                <Edit3 className="w-5 h-5" />
+              </button>
+            )}
+          </DialogTrigger>
+        )}
         <DialogContent className="sm:max-w-lg border-0">
-          <EditProjectForm project={props.project} onClose={onClose} />
+          <EditProjectForm project={project} onClose={handleClose} />
         </DialogContent>
       </Dialog>
     </div>

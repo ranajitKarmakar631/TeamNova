@@ -11,7 +11,7 @@ const CreateTaskDialog = (props: { projectId?: string }) => {
     setIsOpen(false);
   };
   return (
-    <div>
+    <div >
       <Dialog modal={true} open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger>
           <Button>

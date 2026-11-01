@@ -3,12 +3,12 @@ import {
   Permissions,
   PermissionType,
   Roles,
-  RoleType,
-} from "../../common/enums/role.enum";
+  AllRoleType,
+} from "../../common/enums/association.enum";
 import { RolePermissions } from "../../common/utils/role-permission";
 
 export interface RoleDocument extends Document {
-  name: RoleType;
+  name: AllRoleType;
   permissions: Array<PermissionType>;
 }
 
@@ -24,8 +24,8 @@ const roleSchema = new Schema<RoleDocument>(
       type: [String],
       enum: Object.values(Permissions),
       required: true,
-      default: function (this: RoleDocument) {
-        return RolePermissions[this.name];
+      default: function (this: any) {
+        return this?.name ? (RolePermissions as any)[this.name] || [] : [];
       },
     },
   },

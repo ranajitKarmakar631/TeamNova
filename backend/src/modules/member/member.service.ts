@@ -35,35 +35,12 @@ export const getMemberRoleInWorkspace = async (
   return { role: roleName };
 };
 
+import { acceptInvitationService } from "../invite/invite.service";
+
 export const joinWorkspaceByInviteService = async (
   userId: string,
   inviteCode: string
 ) => {
-  const workspace = await WorkspaceModel.findOne({ inviteCode }).exec();
-  if (!workspace) {
-    throw new NotFoundException("Invalid invite code or workspace not found");
-  }
-  const existingMember = await MemberModel.findOne({
-    userId,
-    workspaceId: workspace._id,
-  }).exec();
-
-  if (existingMember) {
-    throw new BadRequestException("You are already a member of this workspace");
-  }
-
-  const role = await RoleModel.findOne({ name: Roles.MEMBER });
-
-  if (!role) {
-    throw new NotFoundException("Role not found");
-  }
-
-  const newMember = new MemberModel({
-    userId,
-    workspaceId: workspace._id,
-    role: role._id,
-  });
-  await newMember.save();
-
-  return { workspaceId: workspace._id, role: role.name };
+  return acceptInvitationService(userId, inviteCode);
 };
+

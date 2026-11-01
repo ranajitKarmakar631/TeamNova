@@ -11,6 +11,11 @@ import {
   UnauthorizedException,
 } from "../../common/utils/appError";
 import { MemberModel } from "../member";
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} from "../../common/utils/jwt";
 
 export const registerUserService = async (body: {
   email: string;
@@ -18,69 +23,51 @@ export const registerUserService = async (body: {
   password: string;
 }) => {
   const { email, name, password } = body;
-  const session = await mongoose.startSession();
 
-  try {
-    session.startTransaction();
-
-    const existingUser = await UserModel.findOne({ email }).session(session);
-    if (existingUser) {
-      throw new BadRequestException("Email already exists");
-    }
-
-    const user = new UserModel({
-      email,
-      name,
-      password,
-    });
-    await user.save({ session });
-
-    const account = new AccountModel({
-      userId: user._id,
-      provider: ProviderEnum.EMAIL,
-      providerId: email,
-    });
-    await account.save({ session });
-
-    // Create a new default workspace for the new user
-    const workspace = new WorkspaceModel({
-      name: `My Workspace`,
-      description: `Workspace created for ${user.name}`,
-      owner: user._id,
-    });
-    await workspace.save({ session });
-
-    const ownerRole = await RoleModel.findOne({
-      name: Roles.OWNER,
-    }).session(session);
-
-    if (!ownerRole) {
-      throw new NotFoundException("Owner role not found");
-    }
-
-    const member = new MemberModel({
-      userId: user._id,
-      workspaceId: workspace._id,
-      role: ownerRole._id,
-      joinedAt: new Date(),
-    });
-    await member.save({ session });
-
-    user.currentWorkspace = workspace._id as mongoose.Types.ObjectId;
-    await user.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return {
-      userId: user._id,
-      workspaceId: workspace._id,
-    };
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
+  const existingUser = await UserModel.findOne({ email });
+  if (existingUser) {
+    throw new BadRequestException("Email already exists");
   }
+
+  const user = new UserModel({
+    email,
+    name,
+    password,
+  });
+  await user.save();
+
+  // const ownerRole = await RoleModel.findOne({
+  //   name: Roles.OWNER,
+  // });
+
+  // if (!ownerRole) {
+  //   throw new NotFoundException("Owner role not found");
+  // }
+
+  // const member = new MemberModel({
+  //   userId: user._id,
+  //   role: ownerRole._id,
+  //   joinedAt: new Date(),
+  // });
+  // await member.save();
+
+  const accessToken = signAccessToken({ userId: user._id.toString() });
+  const refreshToken = signRefreshToken({ userId: user._id.toString() });
+
+  const account = new AccountModel({
+    userId: user._id,
+    provider: ProviderEnum.EMAIL,
+    providerId: email,
+    refreshToken,
+    tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+  await account.save();
+
+  return {
+    user: user.omitPassword(),
+    accessToken,
+    refreshToken,
+  };
 };
 
 export const verifyUserService = async ({
@@ -109,4 +96,91 @@ export const verifyUserService = async ({
   }
 
   return user.omitPassword();
+};
+
+export const loginUserService = async ({
+  email,
+  password,
+}: {
+  email: string;
+  password: string;
+}) => {
+  const user = await verifyUserService({ email, password });
+
+  const accessToken = signAccessToken({ userId: user._id.toString() });
+  const refreshToken = signRefreshToken({ userId: user._id.toString() });
+
+  await AccountModel.findOneAndUpdate(
+    { userId: user._id, provider: ProviderEnum.EMAIL },
+    {
+      refreshToken,
+      tokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    }
+  );
+
+  return {
+    user,
+    accessToken,
+    refreshToken,
+  };
+};
+
+export const refreshTokenService = async (refreshToken: string) => {
+  if (!refreshToken) {
+    throw new UnauthorizedException("Refresh token is required");
+  }
+
+  const decoded = verifyRefreshToken(refreshToken);
+
+  const account = await AccountModel.findOne({
+    userId: decoded.userId,
+    refreshToken,
+  });
+
+  if (!account) {
+    throw new UnauthorizedException("Invalid or revoked refresh token");
+  }
+
+  if (account.tokenExpiry && account.tokenExpiry < new Date()) {
+    throw new UnauthorizedException("Refresh token expired");
+  }
+
+  const user = await UserModel.findById(decoded.userId);
+  if (!user) {
+    throw new UnauthorizedException("User not found");
+  }
+
+  // Issue new access token and rotate refresh token
+  const newAccessToken = signAccessToken({ userId: user._id.toString() });
+  const newRefreshToken = signRefreshToken({ userId: user._id.toString() });
+
+  account.refreshToken = newRefreshToken;
+  account.tokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  await account.save();
+
+  return {
+    user: user.omitPassword(),
+    accessToken: newAccessToken,
+    refreshToken: newRefreshToken,
+  };
+};
+
+export const logoutUserService = async ({
+  refreshToken,
+  userId,
+}: {
+  refreshToken?: string;
+  userId?: string;
+}) => {
+  if (refreshToken) {
+    await AccountModel.updateOne(
+      { refreshToken },
+      { refreshToken: null, tokenExpiry: null }
+    );
+  } else if (userId) {
+    await AccountModel.updateOne(
+      { userId, provider: ProviderEnum.EMAIL },
+      { refreshToken: null, tokenExpiry: null }
+    );
+  }
 };

@@ -15,6 +15,8 @@ const badgeVariants = cva(
           "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive:
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80",
+        success:
+          "border-transparent bg-green-500 text-white shadow hover:bg-green-600",
         outline: "text-foreground",
         [TaskStatusEnum.BACKLOG]: "bg-gray-100 text-gray-600",
         [TaskStatusEnum.TODO]: "  bg-[#DEEBFF] text-[#0052CC]",

@@ -3,6 +3,13 @@ import MemberModel from "../member/member.model";
 import ProjectModel from "../project/project.model";
 import TaskModel from "./task.model";
 import { BadRequestException, NotFoundException } from "../../common/utils/appError";
+import AssociationModel, {
+  AssociationStatus,
+} from "../association/association.model";
+import {
+  AssociationRoles,
+  AssociationScope,
+} from "../../common/enums/association.enum";
 
 export const createTaskService = async (
   workspaceId: string,
@@ -50,6 +57,38 @@ export const createTaskService = async (
 
   await task.save();
 
+  // If task is assigned to a user, associate that user with the project if not already associated
+  if (assignedTo) {
+    const assignedMember = await MemberModel.findOne({
+      userId: assignedTo,
+      workspaceId,
+    });
+    if (assignedMember) {
+      await AssociationModel.findOneAndUpdate(
+        {
+          memberId: assignedMember._id,
+          workspaceId,
+          scopeType: AssociationScope.PROJECT,
+          scopeId: project._id,
+        },
+        {
+          $setOnInsert: {
+            memberId: assignedMember._id,
+            workspaceId,
+            scopeType: AssociationScope.PROJECT,
+            scopeId: project._id,
+            role: AssociationRoles.MEMBER,
+            joinedAt: new Date(),
+          },
+          $set: {
+            status: AssociationStatus.ACTIVE,
+          },
+        },
+        { upsert: true, new: true }
+      );
+    }
+  }
+
   return { task };
 };
 
@@ -92,6 +131,38 @@ export const updateTaskService = async (
 
   if (!updatedTask) {
     throw new BadRequestException("Failed to update task");
+  }
+
+  // If task assignment is updated, associate newly assigned user with the project
+  if (body.assignedTo) {
+    const assignedMember = await MemberModel.findOne({
+      userId: body.assignedTo,
+      workspaceId,
+    });
+    if (assignedMember) {
+      await AssociationModel.findOneAndUpdate(
+        {
+          memberId: assignedMember._id,
+          workspaceId,
+          scopeType: AssociationScope.PROJECT,
+          scopeId: project._id,
+        },
+        {
+          $setOnInsert: {
+            memberId: assignedMember._id,
+            workspaceId,
+            scopeType: AssociationScope.PROJECT,
+            scopeId: project._id,
+            role: AssociationRoles.MEMBER,
+            joinedAt: new Date(),
+          },
+          $set: {
+            status: AssociationStatus.ACTIVE,
+          },
+        },
+        { upsert: true, new: true }
+      );
+    }
   }
 
   return { updatedTask };

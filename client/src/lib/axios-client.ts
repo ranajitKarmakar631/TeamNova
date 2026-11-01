@@ -11,20 +11,80 @@ const options = {
 
 const API = axios.create(options);
 
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve();
+    }
+  });
+  failedQueue = [];
+};
+
 API.interceptors.response.use(
   (response) => {
     return response;
   },
   async (error) => {
-    const { data, status } = error.response;
+    const originalRequest = error?.config;
+    const response = error?.response;
 
-    if (data === "Unauthorized" && status === 401) {
-      window.location.href = "/";
+    if (response?.status === 401 && !originalRequest?._retry) {
+      const isAuthUrl =
+        originalRequest?.url?.includes("/auth/login") ||
+        originalRequest?.url?.includes("/auth/register") ||
+        originalRequest?.url?.includes("/auth/refresh");
+
+      if (!isAuthUrl) {
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          })
+            .then(() => API(originalRequest))
+            .catch((err) => Promise.reject(err));
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        try {
+          await axios.post(
+            `${baseURL}/auth/refresh`,
+            {},
+            { withCredentials: true }
+          );
+          processQueue(null);
+          return API(originalRequest);
+        } catch (refreshError) {
+          processQueue(refreshError);
+
+          // Prevent infinite reload loop: only redirect if not already on an auth page
+          const isAuthPage =
+            window.location.pathname === "/" ||
+            window.location.pathname.startsWith("/sign-up") ||
+            window.location.pathname.startsWith("/google/oauth");
+
+          if (!isAuthPage) {
+            window.location.href = "/";
+          }
+
+          return Promise.reject(refreshError);
+        } finally {
+          isRefreshing = false;
+        }
+      }
     }
 
     const customError: CustomError = {
       ...error,
-      errorCode: data?.errorCode || "UNKNOWN_ERROR",
+      errorCode: response?.data?.errorCode || "UNKNOWN_ERROR",
     };
 
     return Promise.reject(customError);

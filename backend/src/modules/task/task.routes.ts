@@ -9,23 +9,58 @@ import {
 
 const taskRoutes = Router();
 
+// Tasks in workspace
+taskRoutes.get("/workspaces/:workspaceId", getAllTasksController);
+taskRoutes.get("/workspace/:workspaceId/all", getAllTasksController);
+
+// Task creation in project & workspace
+taskRoutes.post(
+  "/projects/:projectId/workspaces/:workspaceId",
+  createTaskController
+);
 taskRoutes.post(
   "/project/:projectId/workspace/:workspaceId/create",
   createTaskController
 );
 
-taskRoutes.delete("/:id/workspace/:workspaceId/delete", deleteTaskController);
+// Single task item operations
+taskRoutes.get(
+  "/:taskId/projects/:projectId/workspaces/:workspaceId",
+  getTaskByIdController
+);
+taskRoutes.get(
+  "/:taskId/project/:projectId/workspace/:workspaceId",
+  getTaskByIdController
+);
 
+taskRoutes.patch(
+  "/:taskId/projects/:projectId/workspaces/:workspaceId",
+  updateTaskController
+);
 taskRoutes.put(
-  "/:id/project/:projectId/workspace/:workspaceId/update",
+  "/:taskId/projects/:projectId/workspaces/:workspaceId",
+  updateTaskController
+);
+taskRoutes.put(
+  "/:taskId/project/:projectId/workspace/:workspaceId/update",
+  updateTaskController
+);
+taskRoutes.put(
+  "/:taskId/project/:projectId/workspace/:workspaceId/update/",
+  updateTaskController
+);
+taskRoutes.patch(
+  "/:taskId/project/:projectId/workspace/:workspaceId/update",
   updateTaskController
 );
 
-taskRoutes.get("/workspace/:workspaceId/all", getAllTasksController);
-
-taskRoutes.get(
-  "/:id/project/:projectId/workspace/:workspaceId",
-  getTaskByIdController
+taskRoutes.delete(
+  "/:taskId/workspaces/:workspaceId",
+  deleteTaskController
+);
+taskRoutes.delete(
+  "/:taskId/workspace/:workspaceId/delete",
+  deleteTaskController
 );
 
 export default taskRoutes;

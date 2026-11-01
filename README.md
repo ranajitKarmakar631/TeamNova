@@ -22,7 +22,7 @@
   - Task status tracking (Backlog, Todo, In Progress, In Review, Done).
   - Task priority management, due dates, and assignee delegation.
 - 📊 **Workspace & Project Analytics**: Overview dashboards tracking task completion, overdue milestones, and team activity.
-- 🔐 **Secure Authentication**: Session-based authentication via Passport.js, cookie sessions, and encrypted credentials.
+- 🔐 **Secure Authentication**: JWT-based authentication using short-lived Access Tokens and rotating Refresh Tokens with HTTP-only cookies and Bearer token support.
 - 📧 **Transactional Email Notifications**: Nodemailer SMTP integration for invite delivery and alerts.
 
 ---
@@ -40,7 +40,7 @@
 - **Runtime**: Node.js & Express
 - **Language**: TypeScript
 - **Database**: MongoDB with Mongoose ODM
-- **Authentication**: Passport.js (Local Strategy) & Cookie Sessions
+- **Authentication**: JWT (Access & Refresh Tokens) with HTTP-only cookies
 - **Email Service**: Nodemailer
 - **Validation**: Zod schema validation
 
@@ -53,7 +53,7 @@ TeamNova/
 ├── backend/                  # Express + TypeScript REST API
 │   ├── src/
 │   │   ├── common/           # Enums, middlewares, and utilities
-│   │   ├── config/           # Database, passport, mail, and app configs
+│   │   ├── config/           # Database, mail, and app configs
 │   │   ├── modules/          # Auth, User, Workspace, Member, Project, Task modules
 │   │   ├── seeders/          # Role and permission seeder scripts
 │   │   └── index.ts          # Server entry point
