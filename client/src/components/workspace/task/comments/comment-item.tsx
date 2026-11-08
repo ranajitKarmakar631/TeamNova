@@ -211,15 +211,6 @@ export const CommentItem: React.FC<CommentItemProps> = React.memo(({
               <span className="text-xs font-semibold text-foreground truncate">
                 {authorName}
               </span>
-              {isEncrypted && (
-                <span
-                  className="inline-flex items-center gap-0.5 text-[9px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-full border border-emerald-500/20"
-                  title="End-to-end encrypted with AES-256-GCM"
-                >
-                  <Lock className="h-2.5 w-2.5" />
-                  <span>E2EE</span>
-                </span>
-              )}
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">

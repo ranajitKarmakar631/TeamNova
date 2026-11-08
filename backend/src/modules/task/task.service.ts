@@ -203,12 +203,12 @@ export const createTaskService = async (
   userId: string,
   body: {
     title: string;
-    description?: string;
+    description?: string | null;
     priority: string;
     status: string;
     assignedTo?: string | string[] | null;
     reportedTo?: string | null;
-    dueDate?: string;
+    dueDate?: string | null;
     teamId?: string | null;
     team?: string | null;
   }
@@ -396,12 +396,12 @@ export const updateTaskService = async (
   userId: string,
   body: {
     title?: string;
-    description?: string;
+    description?: string | null;
     priority?: string;
     status?: string;
     assignedTo?: string | string[] | null;
     reportedTo?: string | null;
-    dueDate?: string;
+    dueDate?: string | null;
     teamId?: string | null;
     team?: string | null;
   }
@@ -425,7 +425,9 @@ export const updateTaskService = async (
   if (body.description !== undefined) updatePayload.description = body.description;
   if (body.priority !== undefined) updatePayload.priority = body.priority;
   if (body.status !== undefined) updatePayload.status = body.status;
-  if (body.dueDate !== undefined) updatePayload.dueDate = body.dueDate;
+  if (body.dueDate !== undefined) {
+    updatePayload.dueDate = body.dueDate ? new Date(body.dueDate) : null;
+  }
 
   if (body.reportedTo !== undefined) {
     if (!body.reportedTo || body.reportedTo === "none") {
@@ -614,8 +616,13 @@ export const getAllTasksService = async (
   }
 
   if (filters.dueDate) {
+    const startOfDay = new Date(filters.dueDate);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(filters.dueDate);
+    endOfDay.setUTCHours(23, 59, 59, 999);
     query.dueDate = {
-      $eq: new Date(filters.dueDate),
+      $gte: startOfDay,
+      $lte: endOfDay,
     };
   }
 

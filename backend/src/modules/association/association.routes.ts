@@ -30,10 +30,12 @@ associationRoutes.post("/remove", removeMemberController);
 associationRoutes.get("/my-associations", getMyAssociationsController);
 
 // Members of a specific scope (scopeType = TEAM | PROJECT)
+associationRoutes.get("/members", getScopeMembersController);
 associationRoutes.get("/scopes/:scopeType/:scopeId", getScopeMembersController);
 associationRoutes.get("/scope/:scopeType/:scopeId", getScopeMembersController);
 
 // Available members eligible to join scope (scopeType = TEAM | PROJECT)
+associationRoutes.get("/available-members", getAvailableScopeMembersController);
 associationRoutes.get(
   "/scopes/:scopeType/:scopeId/available-members",
   getAvailableScopeMembersController

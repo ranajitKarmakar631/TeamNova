@@ -93,10 +93,15 @@ export const removeMemberController = asyncHandler(
 export const getScopeMembersController = asyncHandler(
   async (req: Request, res: Response) => {
     const currentUserId = req.user?._id?.toString()!;
-    const { scopeType, scopeId } = scopeParamsSchema.parse(req.params);
-    const { workspaceId, status, role, search } = getScopeMembersQuerySchema.parse(
-      req.query
-    );
+    const rawScopeData = {
+      scopeType: req.params.scopeType || req.query.scopeType,
+      scopeId: req.params.scopeId || req.query.scopeId,
+    };
+    const { scopeType, scopeId } = scopeParamsSchema.parse(rawScopeData);
+    const { workspaceId, status, role, search } = getScopeMembersQuerySchema.parse({
+      ...req.query,
+      workspaceId: req.query.workspaceId || req.params.workspaceId,
+    });
 
     const result = await getScopeMembersService(
       currentUserId,
@@ -121,10 +126,15 @@ export const getScopeMembersController = asyncHandler(
 export const getAvailableScopeMembersController = asyncHandler(
   async (req: Request, res: Response) => {
     const currentUserId = req.user?._id?.toString()!;
-    const { scopeType, scopeId } = scopeParamsSchema.parse(req.params);
-    const { workspaceId, search } = getAvailableScopeMembersQuerySchema.parse(
-      req.query
-    );
+    const rawScopeData = {
+      scopeType: req.params.scopeType || req.query.scopeType,
+      scopeId: req.params.scopeId || req.query.scopeId,
+    };
+    const { scopeType, scopeId } = scopeParamsSchema.parse(rawScopeData);
+    const { workspaceId, search } = getAvailableScopeMembersQuerySchema.parse({
+      ...req.query,
+      workspaceId: req.query.workspaceId || req.params.workspaceId,
+    });
 
     const result = await getAvailableScopeMembersService(
       currentUserId,

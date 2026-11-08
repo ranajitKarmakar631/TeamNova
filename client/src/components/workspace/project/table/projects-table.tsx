@@ -110,13 +110,17 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
   }, [filters.keyword]);
 
   useEffect(() => {
-    if ((debouncedSearch || null) !== (filters.keyword || null)) {
-      setFilters({
-        ...filters,
-        keyword: debouncedSearch || null,
-      });
-    }
-  }, [debouncedSearch]);
+    setFilters((prev) => {
+      const nextKeyword = debouncedSearch || null;
+      if ((nextKeyword || null) !== (prev.keyword || null)) {
+        return {
+          ...prev,
+          keyword: nextKeyword,
+        };
+      }
+      return prev;
+    });
+  }, [debouncedSearch, setFilters]);
 
   const hasActiveFilters = Boolean(searchValue && searchValue !== "");
 

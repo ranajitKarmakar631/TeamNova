@@ -184,7 +184,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
   };
 
   // Filter or sort tasks if "recentlyUpdated" or "groupBy" is active
-  let displayedTasks = [...tasks];
+  const displayedTasks = [...tasks];
   if (recentlyUpdated) {
     displayedTasks.sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;

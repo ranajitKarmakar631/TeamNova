@@ -23,7 +23,10 @@ import { roleGuard } from "../../common/utils/roleGuard";
 
 export const createWorkspaceLinkController = asyncHandler(
   async (req: Request, res: Response) => {
-    const body = createLinkInviteSchema.parse(req.body);
+    const body = createLinkInviteSchema.parse({
+      ...req.body,
+      workspaceId: req.params.workspaceId || req.body.workspaceId,
+    });
     const userId = req.user?._id?.toString()!;
 
     const { role } = await getMemberRoleInWorkspace(userId, body.workspaceId);
@@ -44,7 +47,10 @@ export const createWorkspaceLinkController = asyncHandler(
 
 export const createWorkspaceEmailController = asyncHandler(
   async (req: Request, res: Response) => {
-    const body = createEmailInviteSchema.parse(req.body);
+    const body = createEmailInviteSchema.parse({
+      ...req.body,
+      workspaceId: req.params.workspaceId || req.body.workspaceId,
+    });
     const userId = req.user?._id?.toString()!;
 
     const { role } = await getMemberRoleInWorkspace(userId, body.workspaceId);

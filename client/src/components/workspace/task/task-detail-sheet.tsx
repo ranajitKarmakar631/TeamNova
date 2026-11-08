@@ -219,17 +219,15 @@ export const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({
     },
     { enabled: Boolean(workspaceId && selectedProjectId) }
   );
-  const rawProjectMembers = projectMembersData?.members || [];
-  const availableMembers = React.useMemo(
-    () =>
-      rawProjectMembers.map((m: any) => ({
-        _id: String(m.user?._id || m.userId || m._id),
-        name: m.user?.name || m.name || "Member",
-        email: m.user?.email || m.email || "",
-        profilePicture: m.user?.profilePicture || m.profilePicture || null,
-      })),
-    [rawProjectMembers]
-  );
+  const availableMembers = React.useMemo(() => {
+    const raw = projectMembersData?.members || [];
+    return raw.map((m: any) => ({
+      _id: String(m.user?._id || m.userId || m._id),
+      name: m.user?.name || m.name || "Member",
+      email: m.user?.email || m.email || "",
+      profilePicture: m.user?.profilePicture || m.profilePicture || null,
+    }));
+  }, [projectMembersData?.members]);
 
   // Creator details
   const creatorName =

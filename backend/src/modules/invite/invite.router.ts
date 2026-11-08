@@ -17,7 +17,29 @@ inviteRouter.get("/:token", getInviteDetailsController);
 
 // Authenticated routes
 inviteRouter.post("/link", isAuthenticated, createWorkspaceLinkController);
+inviteRouter.post(
+  "/workspace/:workspaceId/link",
+  isAuthenticated,
+  createWorkspaceLinkController
+);
+inviteRouter.post(
+  "/workspaces/:workspaceId/link",
+  isAuthenticated,
+  createWorkspaceLinkController
+);
+
 inviteRouter.post("/email", isAuthenticated, createWorkspaceEmailController);
+inviteRouter.post(
+  "/workspace/:workspaceId/email",
+  isAuthenticated,
+  createWorkspaceEmailController
+);
+inviteRouter.post(
+  "/workspaces/:workspaceId/email",
+  isAuthenticated,
+  createWorkspaceEmailController
+);
+
 inviteRouter.post("/accept", isAuthenticated, acceptInviteController);
 inviteRouter.get(
   "/workspaces/:workspaceId",

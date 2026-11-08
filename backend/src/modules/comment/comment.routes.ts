@@ -57,6 +57,10 @@ commentRoutes.put(
   "/workspaces/:workspaceId/comments/:commentId",
   updateCommentController
 );
+commentRoutes.put(
+  "/workspace/:workspaceId/comment/:commentId",
+  updateCommentController
+);
 commentRoutes.patch("/:commentId", updateCommentController);
 commentRoutes.put("/:commentId", updateCommentController);
 
@@ -83,8 +87,17 @@ commentRoutes.post(
   "/workspaces/:workspaceId/comments/:commentId/reaction",
   toggleReactionController
 );
+commentRoutes.post(
+  "/workspace/:workspaceId/comment/:commentId/react",
+  toggleReactionController
+);
+commentRoutes.post(
+  "/workspaces/:workspaceId/comments/:commentId/react",
+  toggleReactionController
+);
 commentRoutes.post("/:commentId/reactions", toggleReactionController);
 commentRoutes.post("/:commentId/reaction", toggleReactionController);
+commentRoutes.post("/:commentId/react", toggleReactionController);
 
 export default commentRoutes;
 

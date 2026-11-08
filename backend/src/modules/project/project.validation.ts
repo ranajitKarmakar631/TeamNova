@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-export const emojiSchema = z.string().trim().optional();
+export const emojiSchema = z.string().trim().nullable().optional();
 export const nameSchema = z.string().trim().min(1).max(255);
-export const descriptionSchema = z.string().trim().optional();
+export const descriptionSchema = z.string().trim().nullable().optional();
 
 export const projectIdSchema = z.string().trim().min(1);
 

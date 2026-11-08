@@ -497,7 +497,7 @@ const InviteMember = () => {
                             disabled={isRevoking}
                             onClick={() =>
                               revokeInvite({
-                                workspaceId: workspace?._id!,
+                                workspaceId: workspace?._id || "",
                                 invitationId: inv._id,
                               })
                             }

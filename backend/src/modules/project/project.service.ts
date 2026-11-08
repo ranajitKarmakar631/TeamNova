@@ -14,15 +14,16 @@ import AssociationModel, {
   AssociationStatus,
 } from "../association/association.model";
 import MemberModel from "../member/member.model";
+import CommentModel from "../comment/comment.model";
 import { resolveMember } from "../association/association.service";
 
 export const createProjectService = async (
   userId: string,
   workspaceId: string,
   body: {
-    emoji?: string;
+    emoji?: string | null;
     name: string;
-    description?: string;
+    description?: string | null;
     teamId?: string;
     teamIds?: string[];
     newTeam?: {
@@ -465,9 +466,9 @@ export const updateProjectService = async (
   workspaceId: string,
   projectId: string,
   body: {
-    emoji?: string;
+    emoji?: string | null;
     name?: string;
-    description?: string;
+    description?: string | null;
     teamId?: string;
     teamIds?: string[];
   },
@@ -485,9 +486,9 @@ export const updateProjectService = async (
     );
   }
 
-  if (emoji !== undefined) project.emoji = emoji;
+  if (emoji !== undefined) project.emoji = emoji || "📊";
   if (name !== undefined) project.name = name;
-  if (description !== undefined) project.description = description;
+  if (description !== undefined) project.description = description ? description.trim() : null;
 
   if (teamIds !== undefined && Array.isArray(teamIds)) {
     const validTeams = await TeamModel.find({
@@ -622,6 +623,10 @@ export const deleteProjectService = async (
   await project.deleteOne();
 
   await TaskModel.deleteMany({
+    project: project._id,
+  });
+
+  await CommentModel.deleteMany({
     project: project._id,
   });
 

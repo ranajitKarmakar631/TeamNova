@@ -53,7 +53,7 @@ export const ProjectMembers = () => {
     sortBy,
   });
 
-  const members = data?.members || [];
+  const members = useMemo(() => data?.members || [], [data?.members]);
   const totalCount = data?.totalCount ?? members.length;
 
   // Extract unique team names for the filter dropdown (provided by backend or fallback)

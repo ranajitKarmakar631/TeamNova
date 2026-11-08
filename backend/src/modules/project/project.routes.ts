@@ -94,6 +94,10 @@ projectRoutes.get(
   getProjectMemberTasksController
 );
 projectRoutes.get(
+  "/:projectId/workspace/:workspaceId/members/:userId/tasks",
+  getProjectMemberTasksController
+);
+projectRoutes.get(
   "/:projectId/workspace/:workspaceId/member/:userId/tasks",
   getProjectMemberTasksController
 );

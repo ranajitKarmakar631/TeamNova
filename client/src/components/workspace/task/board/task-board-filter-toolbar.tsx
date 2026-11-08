@@ -64,13 +64,14 @@ export const TaskBoardFilterToolbar: React.FC<TaskBoardFilterToolbarProps> = ({
   }, [filters.keyword]);
 
   useEffect(() => {
-    if ((debouncedSearch || null) !== (filters.keyword || null)) {
+    const nextKeyword = debouncedSearch ? debouncedSearch : null;
+    if ((nextKeyword || null) !== (filters.keyword || null)) {
       setFilters({
         ...filters,
-        keyword: debouncedSearch ? debouncedSearch : null,
+        keyword: nextKeyword,
       });
     }
-  }, [debouncedSearch]);
+  }, [debouncedSearch, filters, setFilters]);
 
   // By default, filter to current user's tasks
   const isOnlyMyTasks =

@@ -3,6 +3,7 @@ import { Server as SocketIoServer } from "socket.io";
 import SocketService from "./socketService";
 import { redis } from "../../../redis/redis.service";
 import { socketAuthMiddleware } from "./socket.middleware";
+import { config } from "../../../config/app.config";
 
 let io: SocketIoServer | null = null;
 let service: SocketService | null = null;
@@ -10,7 +11,7 @@ let service: SocketService | null = null;
 export const initSocket = (httpServer: HttpServer) => {
   io = new SocketIoServer(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || "http://localhost:3000",
+      origin: config.FRONTEND_ORIGIN || process.env.FRONTEND_URL || "http://localhost:3000",
       credentials: true,
     },
   });

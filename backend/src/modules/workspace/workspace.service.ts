@@ -11,6 +11,8 @@ import { TaskModel } from "../task";
 import TeamModel from "../teams/teams.model";
 import AssociationModel from "../association/association.model";
 import WorkspaceInvitation from "../invite/invite.model";
+import CommentModel from "../comment/comment.model";
+import NotificationModel from "../notification/notification.model";
 
 //********************************
 // CREATE NEW WORKSPACE
@@ -236,7 +238,7 @@ export const removeWorkspaceMemberService = async (
   // 3. Unassign any tasks in this workspace assigned to this user
   await TaskModel.updateMany(
     { workspace: workspaceId, assignedTo: member.userId },
-    { $set: { assignedTo: null } }
+    { $pull: { assignedTo: member.userId } }
   );
 
   // 4. Update currentWorkspace if the removed user currently has this workspace active
@@ -300,6 +302,8 @@ export const deleteWorkspaceService = async (
 
   await ProjectModel.deleteMany({ workspace: workspace._id });
   await TaskModel.deleteMany({ workspace: workspace._id });
+  await CommentModel.deleteMany({ workspace: workspace._id });
+  await NotificationModel.deleteMany({ workspaceId: workspace._id });
   await TeamModel.deleteMany({ workspaceId: workspace._id });
   await AssociationModel.deleteMany({ workspaceId: workspace._id });
   await WorkspaceInvitation.deleteMany({ workspaceId: workspace._id });
