@@ -82,7 +82,7 @@ export const useCreateComment = () => {
     mutationFn: (payload: CreateCommentPayloadType) =>
       createCommentMutationFn(payload),
     onSuccess: (_, variables) => {
-      // Invalidate comments list
+      // Invalidate only the specific task's comments list
       queryClient.invalidateQueries({
         queryKey: ["task-comments", variables.workspaceId, variables.taskId],
       });
@@ -92,18 +92,27 @@ export const useCreateComment = () => {
           queryKey: ["comment-replies", variables.workspaceId, variables.parentId],
         });
       }
-      // Invalidate task queries so commentCount updates
-      queryClient.invalidateQueries({
-        queryKey: ["all-tasks"],
+      // Update commentCount in "all-tasks" cache directly without invalidating/refetching the whole page
+      queryClient.setQueriesData({ queryKey: ["all-tasks"] }, (oldData: any) => {
+        if (!oldData || !Array.isArray(oldData.tasks)) return oldData;
+        return {
+          ...oldData,
+          tasks: oldData.tasks.map((t: any) =>
+            t._id === variables.taskId
+              ? { ...t, commentCount: (t.commentCount || 0) + 1 }
+              : t
+          ),
+        };
       });
-      queryClient.invalidateQueries({
-        queryKey: ["task", variables.taskId],
+      // Update single task query if active
+      queryClient.setQueryData(["task", variables.taskId], (oldTask: any) => {
+        if (!oldTask) return oldTask;
+        return {
+          ...oldTask,
+          commentCount: (oldTask.commentCount || 0) + 1,
+        };
       });
-      toast({
-        title: "Success",
-        description: "Comment posted",
-        variant: "success",
-      });
+      // Silent on user side - no intrusive success toast popup
     },
     onError: (error: any) => {
       toast({
@@ -128,11 +137,7 @@ export const useUpdateComment = () => {
       queryClient.invalidateQueries({
         queryKey: ["comment-replies"],
       });
-      toast({
-        title: "Success",
-        description: "Comment updated",
-        variant: "success",
-      });
+      // Silent inline update - no toast popup
     },
     onError: (error: any) => {
       toast({
@@ -153,21 +158,26 @@ export const useDeleteComment = () => {
         workspaceId: payload.workspaceId,
         commentId: payload.commentId,
       }),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["task-comments"],
       });
       queryClient.invalidateQueries({
         queryKey: ["comment-replies"],
       });
-      queryClient.invalidateQueries({
-        queryKey: ["all-tasks"],
-      });
-      toast({
-        title: "Success",
-        description: "Comment deleted",
-        variant: "success",
-      });
+      if (variables.taskId) {
+        queryClient.setQueriesData({ queryKey: ["all-tasks"] }, (oldData: any) => {
+          if (!oldData || !Array.isArray(oldData.tasks)) return oldData;
+          return {
+            ...oldData,
+            tasks: oldData.tasks.map((t: any) =>
+              t._id === variables.taskId
+                ? { ...t, commentCount: Math.max(0, (t.commentCount || 1) - 1) }
+                : t
+            ),
+          };
+        });
+      }
     },
     onError: (error: any) => {
       toast({

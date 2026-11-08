@@ -37,6 +37,7 @@ export interface GetCommentsQueryInput {
 // Helper to extract readable plain text from string or Lexical JSON AST
 export const extractPlainTextFromContent = (content: any): string => {
   if (!content) return "";
+  if (typeof content === "object" && content.isEncrypted) return "🔒 Encrypted comment";
   if (typeof content === "string") return content;
 
   const textPieces: string[] = [];
@@ -56,7 +57,7 @@ export const extractPlainTextFromContent = (content: any): string => {
 
 // Helper to extract mentioned user IDs from Lexical JSON AST
 export const extractMentionsFromLexicalContent = (content: any): string[] => {
-  if (!content || typeof content !== "object") return [];
+  if (!content || typeof content !== "object" || content.isEncrypted) return [];
   const mentionIds: string[] = [];
 
   const traverse = (node: any) => {
@@ -161,96 +162,107 @@ export const createCommentService = async (
   await comment.populate("author", "_id name profilePicture email");
   await comment.populate("mentions", "_id name profilePicture email");
 
-  // 8. Asynchronous notification dispatch (fail-safe)
-  try {
-    const author = await UserModel.findById(userId).select("name");
-    const authorName = author?.name || "A team member";
-    const taskIdStr = String(task._id);
-    const commentIdStr = String(comment._id);
+  // 8. Asynchronous background notification dispatch (completely non-blocking)
+  void (async () => {
+    try {
+      const author = await UserModel.findById(userId).select("name");
+      const authorName = author?.name || "A team member";
+      const taskIdStr = String(task._id);
+      const commentIdStr = String(comment._id);
+      const currentUserIdStr = String(userId);
+      const taskCreatorId = ((task.createdBy as any)?._id || task.createdBy)?.toString();
 
-    // A) Notify mentioned users
-    for (const mentionId of validMentionIds) {
-      if (mentionId.toString() !== userId.toString()) {
-        await notificationService.queueNotification({
-          recipient: mentionId.toString(),
-          sender: userId,
-          workspaceId,
-          type: NotificationTypeEnum.GENERAL,
-          title: `Mentioned by ${authorName}`,
-          message: `${authorName} mentioned you in a comment on "${task.title}"`,
-          data: {
-            taskId: taskIdStr,
-            commentId: commentIdStr,
-          },
-        });
+      const plainSnippet = extractPlainTextFromContent(data.content);
+      const displaySnippet = plainSnippet.slice(0, 100);
+      const snippetSuffix = plainSnippet.length > 100 ? "..." : "";
+
+      const commonData = {
+        taskId: taskIdStr,
+        commentId: commentIdStr,
+        taskCode: task.taskCode,
+        projectId: String(task.project),
+        workspaceId: String(workspaceId),
+      };
+
+      const notifiedUserIds = new Set<string>();
+      notifiedUserIds.add(currentUserIdStr);
+
+      for (const mentionId of validMentionIds) {
+        const idStr = mentionId.toString();
+        if (!notifiedUserIds.has(idStr)) {
+          notifiedUserIds.add(idStr);
+          void notificationService
+            .queueNotification({
+              recipient: idStr,
+              sender: userId,
+              workspaceId,
+              type: NotificationTypeEnum.GENERAL,
+              title: `Mentioned by ${authorName}`,
+              message: `${authorName} mentioned you in a comment on "${task.title}"`,
+              data: commonData,
+            })
+            .catch((err) => console.warn("[Notification] Mention error:", err.message));
+        }
       }
-    }
 
-    // B) Notify parent author if this is a reply
-    if (
-      parentComment &&
-      parentComment.author.toString() !== userId.toString() &&
-      !validMentionIds.some((m) => m.toString() === parentComment!.author.toString())
-    ) {
-      await notificationService.queueNotification({
-        recipient: parentComment.author.toString(),
-        sender: userId,
-        workspaceId,
-        type: NotificationTypeEnum.GENERAL,
-        title: `Reply from ${authorName}`,
-        message: `${authorName} replied to your comment on "${task.title}"`,
-        data: {
-          taskId: taskIdStr,
-          commentId: commentIdStr,
-        },
-      });
-    }
+      if (parentComment && parentComment.author) {
+        const parentAuthorId = (
+          (parentComment.author as any)?._id || parentComment.author
+        )?.toString();
+        if (parentAuthorId && !notifiedUserIds.has(parentAuthorId)) {
+          notifiedUserIds.add(parentAuthorId);
+          void notificationService
+            .queueNotification({
+              recipient: parentAuthorId,
+              sender: userId,
+              workspaceId,
+              type: NotificationTypeEnum.GENERAL,
+              title: `Reply from ${authorName}`,
+              message: `${authorName} replied to your comment on "${task.title}": "${displaySnippet}${snippetSuffix}"`,
+              data: commonData,
+            })
+            .catch((err) => console.warn("[Notification] Reply error:", err.message));
+        }
+      }
 
-    // C) If top-level comment, notify task assignees & creator
-    if (!data.parentId) {
-      const recipientIds = new Set<string>();
-
-      if (task.createdBy && task.createdBy.toString() !== userId.toString()) {
-        recipientIds.add(task.createdBy.toString());
+      if (taskCreatorId && !notifiedUserIds.has(taskCreatorId)) {
+        notifiedUserIds.add(taskCreatorId);
+        void notificationService
+          .queueNotification({
+            recipient: taskCreatorId,
+            sender: userId,
+            workspaceId,
+            type: NotificationTypeEnum.GENERAL,
+            title: `New comment on "${task.title}"`,
+            message: `${authorName} commented on "${task.title}": "${displaySnippet}${snippetSuffix}"`,
+            data: commonData,
+          })
+          .catch((err) => console.warn("[Notification] Creator error:", err.message));
       }
 
       if (Array.isArray(task.assignedTo)) {
         for (const assignee of task.assignedTo) {
-          const idStr = assignee.toString();
-          if (idStr !== userId.toString()) {
-            recipientIds.add(idStr);
+          const assigneeId = ((assignee as any)?._id || assignee)?.toString();
+          if (assigneeId && !notifiedUserIds.has(assigneeId)) {
+            notifiedUserIds.add(assigneeId);
+            void notificationService
+              .queueNotification({
+                recipient: assigneeId,
+                sender: userId,
+                workspaceId,
+                type: NotificationTypeEnum.GENERAL,
+                title: `New comment on "${task.title}"`,
+                message: `${authorName} commented: "${displaySnippet}${snippetSuffix}"`,
+                data: commonData,
+              })
+              .catch((err) => console.warn("[Notification] Assignee error:", err.message));
           }
         }
       }
-
-      for (const mentionId of validMentionIds) {
-        recipientIds.delete(mentionId.toString());
-      }
-
-      const plainSnippet = extractPlainTextFromContent(data.content);
-      const displaySnippet = plainSnippet.slice(0, 100);
-
-      for (const recipientId of recipientIds) {
-        await notificationService.queueNotification({
-          recipient: recipientId,
-          sender: userId,
-          workspaceId,
-          type: NotificationTypeEnum.GENERAL,
-          title: `New comment on "${task.title}"`,
-          message: `${authorName} commented: "${displaySnippet}${
-            plainSnippet.length > 100 ? "..." : ""
-          }"`,
-          data: {
-            taskId: taskIdStr,
-            commentId: commentIdStr,
-          },
-        });
-      }
+    } catch (err) {
+      console.warn("[Notification] Background dispatch error:", err);
     }
-  } catch (error) {
-    // Non-blocking log
-    console.error("Failed to queue comment notifications:", error);
-  }
+  })();
 
   return { comment };
 };

@@ -31,7 +31,7 @@ interface CommentInputProps {
   }>;
 }
 
-export const CommentInput: React.FC<CommentInputProps> = ({
+export const CommentInput: React.FC<CommentInputProps> = React.memo(({
   parentId = null,
   placeholder = "Write a comment or type '@' to mention...",
   initialContent = null,
@@ -219,6 +219,8 @@ export const CommentInput: React.FC<CommentInputProps> = ({
       </div>
     </div>
   );
-};
+});
+
+CommentInput.displayName = "CommentInput";
 
 export default CommentInput;

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { formatDistanceToNowStrict, format } from "date-fns";
 import { CommentType } from "@/types/api.type";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,6 +25,7 @@ import {
   ChevronUp,
   Smile,
   Loader2,
+  Lock,
 } from "lucide-react";
 import CommentInput from "./comment-input";
 import LexicalEditor from "@/lib/lexical";
@@ -35,6 +36,10 @@ import {
   useToggleCommentReaction,
   useUpdateComment,
 } from "@/hooks/api/use-task-comments";
+import {
+  encryptCommentContent,
+  decryptCommentContent,
+} from "@/lib/crypto/e2ee";
 
 interface CommentItemProps {
   comment: CommentType;
@@ -52,7 +57,7 @@ interface CommentItemProps {
 
 const QUICK_REACTIONS = ["👍", "❤️", "🚀", "🎉", "👀"];
 
-export const CommentItem: React.FC<CommentItemProps> = ({
+export const CommentItem: React.FC<CommentItemProps> = React.memo(({
   comment,
   workspaceId,
   taskId,
@@ -64,6 +69,53 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
+
+  // E2EE Decrypted content state
+  const isEncrypted = Boolean(
+    comment.content &&
+      typeof comment.content === "object" &&
+      comment.content.isEncrypted
+  );
+  const [decryptedContent, setDecryptedContent] = useState<any>(
+    isEncrypted ? null : comment.content
+  );
+  const [isDecrypting, setIsDecrypting] = useState<boolean>(isEncrypted);
+  const [decryptError, setDecryptError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (
+      comment.content &&
+      typeof comment.content === "object" &&
+      comment.content.isEncrypted
+    ) {
+      setIsDecrypting(true);
+      decryptCommentContent(comment.content, workspaceId)
+        .then((res) => {
+          if (!isMounted) return;
+          setIsDecrypting(false);
+          if (res.error) {
+            setDecryptError(res.error);
+          } else {
+            setDecryptedContent(res.content);
+            setDecryptError(null);
+          }
+        })
+        .catch(() => {
+          if (!isMounted) return;
+          setIsDecrypting(false);
+          setDecryptError("Failed to decrypt comment.");
+        });
+    } else {
+      setDecryptedContent(comment.content);
+      setIsDecrypting(false);
+      setDecryptError(null);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [comment.content, workspaceId]);
 
   const isAuthor = currentUserId === comment.author?._id;
   const canDelete = isAuthor || canModerate;
@@ -84,11 +136,13 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   const replies = repliesData?.replies || [];
 
   const handleEditSubmit = async ({ content }: { content: any }) => {
+    const encryptedContent = await encryptCommentContent(content, workspaceId);
     await updateComment({
       workspaceId,
       commentId: comment._id,
-      content,
+      content: encryptedContent,
     });
+    setDecryptedContent(content);
     setIsEditing(false);
   };
 
@@ -110,12 +164,19 @@ export const CommentItem: React.FC<CommentItemProps> = ({
     });
   };
 
-  const handleReplySubmit = async ({ content, mentions }: { content: any; mentions?: string[] }) => {
+  const handleReplySubmit = async ({
+    content,
+    mentions,
+  }: {
+    content: any;
+    mentions?: string[];
+  }) => {
+    const encryptedContent = await encryptCommentContent(content, workspaceId);
     await createComment({
       workspaceId,
       taskId,
       parentId: comment._id,
-      content,
+      content: encryptedContent,
       mentions,
     });
     setIsReplying(false);
@@ -129,9 +190,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   return (
     <div
       className={`group/comment flex flex-col gap-1.5 rounded-lg transition-colors ${
-        isReply
-          ? "ml-8 pl-3 border-l-2 border-primary/30"
-          : ""
+        isReply ? "ml-8 pl-3 border-l-2 border-primary/30" : ""
       }`}
     >
       <div className="flex items-start gap-2.5">
@@ -148,9 +207,20 @@ export const CommentItem: React.FC<CommentItemProps> = ({
         {/* Comment Box */}
         <div className="flex-1 space-y-1 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-semibold text-foreground truncate">
-              {authorName}
-            </span>
+            <div className="flex items-center gap-1.5 truncate">
+              <span className="text-xs font-semibold text-foreground truncate">
+                {authorName}
+              </span>
+              {isEncrypted && (
+                <span
+                  className="inline-flex items-center gap-0.5 text-[9px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-full border border-emerald-500/20"
+                  title="End-to-end encrypted with AES-256-GCM"
+                >
+                  <Lock className="h-2.5 w-2.5" />
+                  <span>E2EE</span>
+                </span>
+              )}
+            </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
               <span className="text-[11px] text-muted-foreground">
@@ -220,7 +290,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               <CommentInput
                 taskId={taskId}
                 workspaceId={workspaceId}
-                initialContent={comment.content}
+                initialContent={decryptedContent || comment.content}
                 submitLabel="Save"
                 isSubmitting={isUpdating}
                 onCancel={() => setIsEditing(false)}
@@ -233,9 +303,19 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                   ? comment.content
                   : "This comment has been deleted."}
               </span>
+            ) : isDecrypting ? (
+              <div className="flex items-center gap-2 py-1 text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin text-emerald-500" />
+                <span className="text-[11px]">Decrypting message...</span>
+              </div>
+            ) : decryptError ? (
+              <div className="flex items-center gap-1.5 text-rose-500 py-1">
+                <Lock className="h-3.5 w-3.5" />
+                <span className="text-[11px]">{decryptError}</span>
+              </div>
             ) : (
               <LexicalEditor
-                value={comment.content}
+                value={decryptedContent}
                 readOnly={true}
                 showToolbar={false}
                 className="lx-bubble-view"
@@ -383,7 +463,8 @@ export const CommentItem: React.FC<CommentItemProps> = ({
       </div>
     </div>
   );
-};
+});
+
+CommentItem.displayName = "CommentItem";
 
 export default CommentItem;
-

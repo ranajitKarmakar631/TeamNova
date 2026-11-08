@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { MessageSquare, ArrowUpDown, Loader2 } from "lucide-react";
+import React, { useState, useCallback } from "react";
+import { MessageSquare, ArrowUpDown, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,9 +14,11 @@ import useAuth from "@/hooks/api/use-auth";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { useAuthContext } from "@/context/auth-provider";
 import { Permissions } from "@/constant";
+import { encryptCommentContent } from "@/lib/crypto/e2ee";
 
 interface TaskCommentsProps {
   taskId: string;
+  workspaceId?: string;
   projectId?: string;
   members?: Array<{
     _id: string;
@@ -26,11 +28,13 @@ interface TaskCommentsProps {
   }>;
 }
 
-export const TaskComments: React.FC<TaskCommentsProps> = ({
+export const TaskComments: React.FC<TaskCommentsProps> = React.memo(({
   taskId,
+  workspaceId: propWorkspaceId,
   members = [],
 }) => {
-  const workspaceId = useWorkspaceId();
+  const routeWorkspaceId = useWorkspaceId();
+  const workspaceId = propWorkspaceId || routeWorkspaceId;
   const { data: authData } = useAuth();
   const currentUserId = authData?.user?._id;
 
@@ -57,39 +61,52 @@ export const TaskComments: React.FC<TaskCommentsProps> = ({
   const pagination = data?.pagination;
   const totalCount = pagination?.totalCount ?? comments.length;
 
-  const handlePostRootComment = async ({
-    content,
-    mentions,
-  }: {
-    content: any;
-    mentions?: string[];
-  }) => {
-    await createComment({
-      workspaceId,
-      taskId,
+  const handlePostRootComment = useCallback(
+    async ({
       content,
-      parentId: null,
       mentions,
-    });
-  };
+    }: {
+      content: any;
+      mentions?: string[];
+    }) => {
+      // End-to-End Encrypt comment content with AES-256-GCM before sending to backend
+      const encryptedContent = await encryptCommentContent(content, workspaceId);
 
-  const toggleSortOrder = () => {
+      await createComment({
+        workspaceId,
+        taskId,
+        content: encryptedContent,
+        parentId: null,
+        mentions,
+      });
+    },
+    [createComment, workspaceId, taskId]
+  );
+
+  const toggleSortOrder = useCallback(() => {
     setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"));
     setPageNumber(1);
-  };
+  }, []);
 
   const currentUserName = authData?.user?.name || "Me";
   const currentUserAvatar = authData?.user?.profilePicture;
 
   return (
     <div className="flex flex-col gap-3.5 pt-2">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header with E2EE Badge */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4 text-foreground/80" />
           <h3 className="text-xs font-semibold text-foreground">
             Activity & Comments
           </h3>
+          <div
+            className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20"
+            title="Comments are end-to-end encrypted with AES-256-GCM. Server cannot read comment text."
+          >
+            <Lock className="h-2.5 w-2.5" />
+            <span>End-to-End Encrypted</span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -127,8 +144,12 @@ export const TaskComments: React.FC<TaskCommentsProps> = ({
             ))}
           </div>
         ) : comments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-4 text-center text-muted-foreground">
-            <p className="text-[11px]">No activity or comments yet.</p>
+          <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground bg-muted/10 rounded-lg border border-dashed border-border/50">
+            <Lock className="h-5 w-5 mb-1.5 text-muted-foreground/50" />
+            <p className="text-xs font-medium text-foreground/80">No comments yet</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Start a discussion. All messages are end-to-end encrypted.
+            </p>
           </div>
         ) : (
           comments.map((comment) => (
@@ -184,7 +205,7 @@ export const TaskComments: React.FC<TaskCommentsProps> = ({
         )}
       </div>
 
-      {/* Bottom Comment Input Box matching Image 2 */}
+      {/* Bottom Comment Input Box */}
       <div className="flex items-start gap-2.5 pt-2 border-t border-border/40">
         <Avatar className="h-6 w-6 text-[10px] shrink-0 mt-2">
           {currentUserAvatar && (
@@ -202,7 +223,7 @@ export const TaskComments: React.FC<TaskCommentsProps> = ({
             taskId={taskId}
             workspaceId={workspaceId}
             parentId={null}
-            placeholder="Write a comment or type '@' to mention..."
+            placeholder="Write an encrypted comment or type '@' to mention..."
             submitLabel="Post"
             isSubmitting={isPosting}
             onSubmit={handlePostRootComment}
@@ -212,7 +233,8 @@ export const TaskComments: React.FC<TaskCommentsProps> = ({
       </div>
     </div>
   );
-};
+});
+
+TaskComments.displayName = "TaskComments";
 
 export default TaskComments;
-

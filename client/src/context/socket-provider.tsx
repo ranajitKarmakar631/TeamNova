@@ -53,6 +53,15 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     const onNewNotification = (notification: NotificationItemType) => {
+      // Do not display toast to the user who triggered/sent the action
+      const senderId =
+        typeof notification.sender === "object"
+          ? notification.sender?._id
+          : notification.sender;
+      if (senderId && user?._id && String(senderId) === String(user._id)) {
+        return;
+      }
+
       toast({
         title: notification.title,
         description: notification.message,
