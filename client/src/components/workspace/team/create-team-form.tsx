@@ -25,12 +25,16 @@ import { createTeamMutationFn } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
 import { TeamStatusEnum } from "@/constant";
+import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
 
 const formSchema = z.object({
   name: z.string().trim().min(1, {
     message: "Team name is required",
   }).max(100, {
     message: "Team name must be 100 characters or less",
+  }),
+  projectId: z.string().trim().min(1, {
+    message: "Project is required. Teams must be created under a project.",
   }),
   description: z.string().trim().max(500, {
     message: "Description must be 500 characters or less",
@@ -39,12 +43,21 @@ const formSchema = z.object({
 });
 
 export default function CreateTeamForm({
+  projectId: propProjectId,
   onClose,
 }: {
+  projectId?: string;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
+
+  const { data: projectsData, isLoading: isLoadingProjects } =
+    useGetProjectsInWorkspaceQuery({
+      workspaceId,
+      skip: !!propProjectId,
+    });
+  const projects = projectsData?.projects || [];
 
   const { mutate, isPending } = useMutation({
     mutationFn: createTeamMutationFn,
@@ -54,6 +67,7 @@ export default function CreateTeamForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      projectId: propProjectId || "",
       description: "",
       status: "ACTIVE",
     },
@@ -67,6 +81,7 @@ export default function CreateTeamForm({
         workspaceId,
         data: {
           name: values.name,
+          projectId: values.projectId,
           description: values.description || undefined,
           status: values.status as keyof typeof TeamStatusEnum,
         },
@@ -75,6 +90,18 @@ export default function CreateTeamForm({
         onSuccess: (data) => {
           queryClient.invalidateQueries({
             queryKey: ["all-teams", workspaceId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["project-teams", values.projectId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["project-overview", values.projectId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["allprojects", workspaceId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["my-associations", workspaceId],
           });
           toast({
             title: "Success",
@@ -99,12 +126,42 @@ export default function CreateTeamForm({
       <div className="mb-4">
         <h2 className="text-xl font-semibold tracking-tight">Create New Team</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Organize members into functional squads and assign permissions.
+          Teams are organized under a project to manage functional squads and assignments.
         </p>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {!propProjectId && (
+            <FormField
+              control={form.control}
+              name="projectId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingProjects ? "Loading projects..." : "Select parent project"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {projects.map((p) => (
+                        <SelectItem key={p._id} value={p._id}>
+                          <div className="flex items-center gap-2">
+                            <span>{p.emoji || "📁"}</span>
+                            <span>{p.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
           <FormField
             control={form.control}
             name="name"
@@ -112,7 +169,7 @@ export default function CreateTeamForm({
               <FormItem>
                 <FormLabel>Team Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Engineering, Design, Growth" {...field} />
+                  <Input placeholder="e.g. Frontend Squad, Core API, Design" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

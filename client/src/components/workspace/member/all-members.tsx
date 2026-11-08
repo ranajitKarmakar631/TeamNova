@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Check, ChevronDown, Loader } from "lucide-react";
+import { Check, ChevronDown, Loader, Trash2 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/resuable/confirm-dialog";
 
 import {
   Command,
@@ -22,7 +23,7 @@ import { useAuthContext } from "@/context/auth-provider";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { changeWorkspaceMemberRoleMutationFn } from "@/lib/api";
+import { changeWorkspaceMemberRoleMutationFn, deleteWorkspaceMemberMutationFn } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { Permissions, WorkspaceRoles } from "@/constant";
 
@@ -45,16 +46,54 @@ const ROLE_ORDER: Record<string, number> = {
 const AllMembers = () => {
   const { user, hasPermission } = useAuthContext();
   const canChangeMemberRole = hasPermission(Permissions.CHANGE_MEMBER_ROLE);
+  const canRemoveMember = hasPermission(Permissions.REMOVE_MEMBER);
 
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
 
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
   const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null);
+  const [memberToDelete, setMemberToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const { data, isPending } = useGetWorkspaceMembers(workspaceId);
   const members = data?.members || [];
   const roles = data?.roles || [];
+
+  const { mutate: deleteMemberMutate, isPending: isDeletingMember } = useMutation({
+    mutationFn: deleteWorkspaceMemberMutationFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["members", workspaceId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["userWorkspaces"],
+      });
+      toast({
+        title: "Success",
+        description: "Member removed from workspace successfully",
+        variant: "success",
+      });
+      setMemberToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description:
+          error?.response?.data?.message ||
+          error.message ||
+          "Failed to remove member",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleConfirmRemove = () => {
+    if (!memberToDelete) return;
+    deleteMemberMutate({
+      workspaceId,
+      memberId: memberToDelete.id,
+    });
+  };
 
   // Filter selectable roles according to the Workspace model
   const selectableRoles = roles
@@ -244,10 +283,39 @@ const AllMembers = () => {
                   </PopoverContent>
                 )}
               </Popover>
+
+              {canRemoveMember && !isSelf && !isOwner && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8 p-0"
+                  title="Remove member"
+                  onClick={() =>
+                    setMemberToDelete({
+                      id: member._id || memberUserId,
+                      name,
+                    })
+                  }
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span className="sr-only">Remove member</span>
+                </Button>
+              )}
             </div>
           </div>
         );
       })}
+
+      <ConfirmDialog
+        isOpen={Boolean(memberToDelete)}
+        isLoading={isDeletingMember}
+        onClose={() => setMemberToDelete(null)}
+        onConfirm={handleConfirmRemove}
+        title={`Remove ${memberToDelete?.name} from Workspace`}
+        description="Are you sure you want to remove this member? They will lose access to all projects, teams, and tasks in this workspace."
+        confirmText="Remove"
+        cancelText="Cancel"
+      />
     </div>
   );
 };

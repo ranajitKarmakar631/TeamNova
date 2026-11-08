@@ -96,26 +96,99 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
         <DataTableColumnHeader column={column} title="Assigned To" />
       ),
       cell: ({ row }) => {
-        const assignee = row.original.assignedTo || null;
-        const name = assignee?.name || "";
+        const rawAssigned = row.original.assignedTo;
+        const assignees = Array.isArray(rawAssigned)
+          ? rawAssigned
+          : rawAssigned
+          ? [rawAssigned]
+          : [];
 
-        const initials = getAvatarFallbackText(name);
-        const avatarColor = getAvatarColor(name);
+        if (assignees.length === 0) {
+          return <span className="text-muted-foreground text-xs">—</span>;
+        }
 
-        return (
-          name && (
-            <div className="flex items-center gap-1">
+        if (assignees.length === 1) {
+          const assignee = assignees[0];
+          const name = assignee?.name || "";
+          const initials = getAvatarFallbackText(name);
+          const avatarColor = getAvatarColor(name);
+
+          return (
+            <div className="flex items-center gap-1.5">
               <Avatar className="h-6 w-6">
                 <AvatarImage src={assignee?.profilePicture || ""} alt={name} />
                 <AvatarFallback className={avatarColor}>
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <span className="block text-ellipsis w-[100px] truncate">
-                {assignee?.name}
+              <span className="block text-ellipsis w-[100px] truncate text-xs">
+                {name}
               </span>
             </div>
-          )
+          );
+        }
+
+        return (
+          <div className="flex items-center -space-x-1.5 overflow-hidden">
+            {assignees.slice(0, 3).map((a, idx) => {
+              const name = a?.name || "";
+              const initials = getAvatarFallbackText(name);
+              const avatarColor = getAvatarColor(name);
+              return (
+                <Avatar key={a?._id || idx} className="h-6 w-6 border-2 border-background">
+                  <AvatarImage src={a?.profilePicture || ""} alt={name} />
+                  <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
+                </Avatar>
+              );
+            })}
+            {assignees.length > 3 && (
+              <span className="text-[10px] pl-2 text-muted-foreground font-medium">
+                +{assignees.length - 3}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "reportedTo",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Reported To" />
+      ),
+      cell: ({ row }) => {
+        const reporter = row.original.reportedTo;
+        if (!reporter) return <span className="text-muted-foreground text-xs">—</span>;
+        const name = reporter.name || "";
+        const initials = getAvatarFallbackText(name);
+        const avatarColor = getAvatarColor(name);
+
+        return (
+          <div className="flex items-center gap-1.5">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={reporter.profilePicture || ""} alt={name} />
+              <AvatarFallback className={avatarColor}>
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <span className="block text-ellipsis w-[100px] truncate text-xs">
+              {name}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "team",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Team" />
+      ),
+      cell: ({ row }) => {
+        const team = row.original.team;
+        if (!team) return <span className="text-muted-foreground text-xs">—</span>;
+        return (
+          <Badge variant="outline" className="text-xs font-normal">
+            {team.name}
+          </Badge>
         );
       },
     },

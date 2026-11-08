@@ -21,6 +21,12 @@ import { taskRoutes } from "./modules/task";
 import { inviteRoutes } from "./modules/invite";
 import { associationRoutes } from "./modules/association";
 import teamRoute from "./modules/teams/teams.router";
+import {
+  notificationRoutes,
+  initNotificationWorker,
+  closeNotificationWorker,
+  closeNotificationQueue,
+} from "./modules/notification";
 
 import { sendEmail } from "./config/sendMail";
 import { redis } from "./redis/redis.service";
@@ -76,6 +82,7 @@ app.use(`${BASE_PATH}/tasks`, isAuthenticated, taskRoutes);
 app.use(`${BASE_PATH}/invites`, inviteRoutes);
 app.use(`${BASE_PATH}/associations`, isAuthenticated, associationRoutes);
 app.use(`${BASE_PATH}/teams`, isAuthenticated, teamRoute);
+app.use(`${BASE_PATH}/notifications`, isAuthenticated, notificationRoutes);
 
 // Backward-compatible singular mounts
 app.use(`${BASE_PATH}/user`, isAuthenticated, userRoutes);
@@ -86,6 +93,7 @@ app.use(`${BASE_PATH}/task`, isAuthenticated, taskRoutes);
 app.use(`${BASE_PATH}/invite`, inviteRoutes);
 app.use(`${BASE_PATH}/association`, isAuthenticated, associationRoutes);
 app.use(`${BASE_PATH}/team`, isAuthenticated, teamRoute);
+app.use(`${BASE_PATH}/notification`, isAuthenticated, notificationRoutes);
 
 // --------------------------------------------------
 // Global error handler
@@ -115,7 +123,10 @@ const startServer = async (): Promise<void> => {
     // 3. Initialize Socket.IO
     initSocket(server);
 
-    // 4. Start HTTP and Socket.IO on the same port
+    // 4. Initialize Notification Queue Worker
+    initNotificationWorker();
+
+    // 5. Start HTTP and Socket.IO on the same port
     server.listen(config.PORT, () => {
       console.log(
         `Server listening on port ${config.PORT} in ${config.NODE_ENV}`,
@@ -125,10 +136,31 @@ const startServer = async (): Promise<void> => {
   } catch (error) {
     console.error("Server startup failed:", error);
 
+    await closeNotificationWorker().catch(() => undefined);
+    await closeNotificationQueue().catch(() => undefined);
     await redis.quit().catch(() => undefined);
 
     process.exit(1);
   }
 };
+
+const gracefulShutdown = async (signal: string): Promise<void> => {
+  console.log(`Received ${signal}. Shutting down gracefully...`);
+  try {
+    await closeNotificationWorker();
+    await closeNotificationQueue();
+    await redis.quit().catch(() => undefined);
+    server.close(() => {
+      console.log("HTTP server closed.");
+      process.exit(0);
+    });
+  } catch (error) {
+    console.error("Error during graceful shutdown:", error);
+    process.exit(1);
+  }
+};
+
+process.on("SIGINT", () => void gracefulShutdown("SIGINT"));
+process.on("SIGTERM", () => void gracefulShutdown("SIGTERM"));
 
 void startServer();

@@ -226,6 +226,7 @@ export type AllProjectPayloadType = {
   pageSize?: number;
   keyword?: string;
   skip?: boolean;
+  onlyMyProjects?: boolean;
 };
 
 export type AllProjectResponseType = {
@@ -325,6 +326,7 @@ export type ProjectTeamItemType = {
 export type ProjectTeamsResponseType = {
   message: string;
   teams: ProjectTeamItemType[];
+  totalCount?: number;
 };
 
 export type ProjectMemberItemType = {
@@ -356,6 +358,24 @@ export type ProjectMemberItemType = {
 export type ProjectMembersResponseType = {
   message: string;
   members: ProjectMemberItemType[];
+  totalCount?: number;
+  teams?: { id: string; name: string }[];
+};
+
+export type GetProjectMembersPayloadType = {
+  workspaceId: string;
+  projectId: string;
+  search?: string;
+  teamId?: string;
+  role?: string;
+  sortBy?: "tasks" | "completion" | "name";
+};
+
+export type GetProjectTeamsPayloadType = {
+  workspaceId: string;
+  projectId: string;
+  search?: string;
+  status?: string;
 };
 
 export type ProjectMemberTasksResponseType = {
@@ -388,8 +408,10 @@ export type CreateTaskPayloadType = {
     description: string;
     priority: TaskPriorityEnumType;
     status: TaskStatusEnumType;
-    assignedTo: string;
+    assignedTo: string | string[];
+    reportedTo?: string | null;
     dueDate: string;
+    teamId?: string | null;
   };
 };
 
@@ -404,11 +426,19 @@ export type EditTaskPayloadType = {
     description: string;
     priority: TaskPriorityEnumType;
     status: TaskStatusEnumType;
-    assignedTo: string;
+    assignedTo: string | string[];
+    reportedTo?: string | null;
     dueDate: string;
+    teamId: string | null;
   }>;
 };
 
+export type TaskAssigneeType = {
+  _id: string;
+  name: string;
+  email?: string;
+  profilePicture: string | null;
+};
 
 export type TaskType = {
   _id: string;
@@ -419,13 +449,16 @@ export type TaskType = {
     emoji: string;
     name: string;
   };
-  priority: TaskPriorityEnumType;
-  status: TaskStatusEnumType;
-  assignedTo: {
+  team?: {
     _id: string;
     name: string;
-    profilePicture: string | null;
+    slug?: string;
+    description?: string | null;
   } | null;
+  priority: TaskPriorityEnumType;
+  status: TaskStatusEnumType;
+  assignedTo: TaskAssigneeType[] | TaskAssigneeType | null;
+  reportedTo?: TaskAssigneeType | null;
   createdBy?: string;
   dueDate: string;
   taskCode: string;
@@ -436,6 +469,7 @@ export type TaskType = {
 export type AllTaskPayloadType = {
   workspaceId: string;
   projectId?: string | null;
+  teamId?: string | null;
   keyword?: string | null;
   priority?: TaskPriorityEnumType | null;
   status?: TaskStatusEnumType | null;
@@ -458,6 +492,12 @@ export type TeamType = {
   slug?: string;
   description?: string | null;
   workspaceId: string;
+  projectId?: string | {
+    _id: string;
+    name: string;
+    emoji?: string;
+    description?: string | null;
+  } | null;
   status: TeamStatusEnumType;
   createdBy?: {
     _id: string;
@@ -474,8 +514,10 @@ export type AllTeamsPayloadType = {
   workspaceId: string;
   keyword?: string | null;
   status?: string | null;
+  projectId?: string | null;
   pageNumber?: number | null;
   pageSize?: number | null;
+  onlyMyTeams?: boolean;
 };
 
 export type AllTeamsResponseType = {
@@ -488,6 +530,7 @@ export type CreateTeamPayloadType = {
   workspaceId: string;
   data: {
     name: string;
+    projectId?: string;
     description?: string;
     status?: TeamStatusEnumType;
   };

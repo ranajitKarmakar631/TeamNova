@@ -14,9 +14,13 @@ const usePermissions = (
 
   useEffect(() => {
     if (user && workspace) {
-      const member = workspace.members?.find(
-        (member) => member.userId === user._id
-      );
+      const member = workspace.members?.find((m) => {
+        const memberUid =
+          typeof m.userId === "object" && m.userId !== null
+            ? (m.userId as any)._id
+            : m.userId;
+        return String(memberUid) === String(user._id);
+      });
       if (member) {
         const rolePermissions =
           member.role?.permissions && member.role.permissions.length > 0

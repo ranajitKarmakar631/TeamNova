@@ -7,6 +7,7 @@ import useConfirmDialog from "@/hooks/use-confirm-dialog";
 import { toast } from "@/hooks/use-toast";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { deleteWorkspaceMutationFn } from "@/lib/api";
+import { PROTECTED_ROUTES } from "@/routes/common/routePaths";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
@@ -29,7 +30,11 @@ const DeleteWorkspaceCard = () => {
         queryClient.invalidateQueries({
           queryKey: ["userWorkspaces"],
         });
-        navigate(`/workspace/${data.currentWorkspace}`);
+        if (data?.currentWorkspace) {
+          navigate(`/workspace/${data.currentWorkspace}`);
+        } else {
+          navigate(PROTECTED_ROUTES.CREATE_WORKSPACE);
+        }
         setTimeout(() => onCloseDialog(), 100);
       },
       onError: (error) => {

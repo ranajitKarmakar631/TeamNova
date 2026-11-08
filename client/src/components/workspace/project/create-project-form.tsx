@@ -48,7 +48,7 @@ export default function CreateProjectForm({
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
 
   const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
-    queryKey: ["allteams", workspaceId],
+    queryKey: ["all-teams", workspaceId],
     queryFn: () => getAllTeamsQueryFn({ workspaceId }),
     staleTime: 1000 * 60 * 2,
   });
@@ -115,7 +115,7 @@ export default function CreateProjectForm({
           queryKey: ["allprojects", workspaceId],
         });
         queryClient.invalidateQueries({
-          queryKey: ["allteams", workspaceId],
+          queryKey: ["all-teams", workspaceId],
         });
 
         toast({

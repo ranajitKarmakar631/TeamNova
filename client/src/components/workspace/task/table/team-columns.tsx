@@ -1,7 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
-import { Users, Shield, CheckCircle2, Archive, MinusCircle, Crown } from "lucide-react";
+import { Users, Shield, CheckCircle2, Archive, MinusCircle, Crown, FolderKanban } from "lucide-react";
 
 import { DataTableColumnHeader } from "./table-column-header";
 import { TeamTableRowActions } from "./team-row-actions";
@@ -141,6 +141,32 @@ export const getTeamColumns = (
               </span>
             )}
           </div>
+        );
+      },
+    },
+    {
+      id: "project",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Project" />
+      ),
+      cell: ({ row }) => {
+        const proj =
+          typeof row.original.projectId === "object" && row.original.projectId !== null
+            ? (row.original.projectId as { _id: string; name: string; emoji?: string })
+            : null;
+
+        if (!proj) {
+          return <span className="text-muted-foreground/60 italic text-sm">-</span>;
+        }
+
+        return (
+          <Link
+            to={`/workspace/${workspaceId}/project/${proj._id}`}
+            className="flex items-center gap-1.5 text-sm font-medium hover:underline hover:text-primary transition-colors truncate max-w-[180px]"
+          >
+            <span>{proj.emoji || <FolderKanban className="w-3.5 h-3.5" />}</span>
+            <span className="truncate">{proj.name}</span>
+          </Link>
         );
       },
     },

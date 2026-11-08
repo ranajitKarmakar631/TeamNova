@@ -1,5 +1,6 @@
 import type { Server, Socket } from "socket.io";
 import type Redis from "ioredis";
+import { registerNotificationSocketEvents } from "../../notification/notification.socket";
 
 export interface SocketData {
   userId: string;
@@ -83,6 +84,9 @@ export default class SocketService {
     socket.on("disconnect", () => {
       void this.handleDisconnect(socket);
     });
+
+    // Register notification events
+    registerNotificationSocketEvents(socket);
   }
 
   private async addUserSocket(userId: string, socketId: string): Promise<void> {

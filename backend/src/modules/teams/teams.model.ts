@@ -4,6 +4,7 @@ export type TeamStatus = "ACTIVE" | "ARCHIVED" | "INACTIVE";
 
 export interface ITeam {
   workspaceId: Types.ObjectId;
+  projectId?: Types.ObjectId | null;
   name: string;
   slug?: string;
   description?: string | null;
@@ -23,6 +24,12 @@ export const TeamSchema = new Schema<ITeamDocument>(
       type: Schema.Types.ObjectId,
       ref: "Workspace",
       required: [true, "Workspace ID is required"],
+    },
+    projectId: {
+      type: Schema.Types.ObjectId,
+      ref: "Project",
+      default: null,
+      index: true,
     },
     name: {
       type: String,
@@ -54,9 +61,11 @@ export const TeamSchema = new Schema<ITeamDocument>(
   },
   { timestamps: true }
 );
-TeamSchema.index({ workspaceId: 1, name: 1 }, { unique: true });
+TeamSchema.index({ workspaceId: 1, projectId: 1, name: 1 }, { unique: true });
+TeamSchema.index({ workspaceId: 1, name: 1 });
 TeamSchema.index({ workspaceId: 1, slug: 1 }, { unique: true, sparse: true });
 TeamSchema.index({ workspaceId: 1, status: 1 });
+TeamSchema.index({ projectId: 1, status: 1 });
 TeamSchema.index({ createdBy: 1 });
 
 TeamSchema.pre("save", function (this: ITeamDocument, next) {

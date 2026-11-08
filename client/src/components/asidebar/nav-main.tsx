@@ -33,6 +33,9 @@ export function NavMain() {
   const canManageSettings = hasPermission(
     Permissions.MANAGE_WORKSPACE_SETTINGS
   );
+  const canInviteMember = hasPermission(
+    Permissions.INVITE_MEMBER
+  );
 
   const workspaceId = useWorkspaceId();
   const location = useLocation();
@@ -65,11 +68,15 @@ export function NavMain() {
       url: `/workspace/${workspaceId}/members`,
       icon: UserRound,
     },
-    {
-      title: "Send Invite",
-      url: `/workspace/${workspaceId}/send-invite`,
-      icon: Send,
-    },
+    ...(canInviteMember
+      ? [
+          {
+            title: "Send Invite",
+            url: `/workspace/${workspaceId}/send-invite`,
+            icon: Send,
+          },
+        ]
+      : []),
     ...(canManageSettings
       ? [
           {

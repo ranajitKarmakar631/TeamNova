@@ -94,7 +94,7 @@ export const getScopeMembersController = asyncHandler(
   async (req: Request, res: Response) => {
     const currentUserId = req.user?._id?.toString()!;
     const { scopeType, scopeId } = scopeParamsSchema.parse(req.params);
-    const { workspaceId, status, role } = getScopeMembersQuerySchema.parse(
+    const { workspaceId, status, role, search } = getScopeMembersQuerySchema.parse(
       req.query
     );
 
@@ -104,7 +104,8 @@ export const getScopeMembersController = asyncHandler(
       scopeType,
       scopeId,
       status,
-      role
+      role,
+      search
     );
 
     return res.status(HTTPSTATUS.OK).json({
@@ -233,7 +234,7 @@ export const updateAssociationByIdController = asyncHandler(
   }
 );
 
-//********************************
+//********************************             
 // DELETE ASSOCIATION PERMANENTLY
 //********************************
 export const deleteAssociationPermanentlyController = asyncHandler(

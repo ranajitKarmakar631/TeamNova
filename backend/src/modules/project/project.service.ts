@@ -1,13 +1,14 @@
 import mongoose from "mongoose";
 import ProjectModel from "./project.model";
 import TeamModel from "../teams/teams.model";
-import { BadRequestException, NotFoundException } from "../../common/utils/appError";
+import { BadRequestException, NotFoundException, UnauthorizedException } from "../../common/utils/appError";
 import { TaskStatusEnum } from "../task/task.enum";
 import { TaskModel } from "../task";
 import {
   AssociationRoles,
   AssociationRoleType,
   AssociationScope,
+  WorkspaceRoles,
 } from "../../common/enums/association.enum";
 import AssociationModel, {
   AssociationStatus,
@@ -136,6 +137,13 @@ export const createProjectService = async (
 
   await project.save();
 
+  // If a new team was created during project creation, assign this project's ID to it
+  if (resolvedTeamIds.length > 0 && body.newTeam && body.newTeam.name.trim()) {
+    await TeamModel.findByIdAndUpdate(resolvedTeamIds[0], {
+      $set: { projectId: project._id },
+    });
+  }
+
   // 3. Associate the designated Project Lead ONLY IF explicitly provided
   // (Do not default to userId / creator - the creator will not be associated unless they join themselves)
   let leadMemberDoc: any = null;
@@ -225,6 +233,9 @@ export const getProjectsInWorkspaceService = async (
   pageSize: number,
   pageNumber: number,
   keyword?: string,
+  userId?: string,
+  onlyMyProjects?: boolean,
+  userRole?: string,
 ) => {
   const query: Record<string, any> = {
     workspace: workspaceId,
@@ -232,6 +243,54 @@ export const getProjectsInWorkspaceService = async (
 
   if (keyword && keyword.trim() !== "") {
     query.name = { $regex: keyword.trim(), $options: "i" };
+  }
+
+  // Requirement 1: workspace members (EMPLOYEE) can only view their assigned projects
+  const shouldFilterMyProjects =
+    onlyMyProjects || userRole === WorkspaceRoles.EMPLOYEE;
+
+  if (shouldFilterMyProjects && userId) {
+    const member = await MemberModel.findOne({
+      workspaceId,
+      userId,
+    });
+
+    if (member) {
+      const [directAssocs, teamAssocs] = await Promise.all([
+        AssociationModel.find({
+          workspaceId,
+          memberId: member._id,
+          scopeType: AssociationScope.PROJECT,
+          status: AssociationStatus.ACTIVE,
+        }).select("scopeId"),
+        AssociationModel.find({
+          workspaceId,
+          memberId: member._id,
+          scopeType: AssociationScope.TEAM,
+          status: AssociationStatus.ACTIVE,
+        }).select("scopeId"),
+      ]);
+
+      const teamIds = teamAssocs.map((a) => a.scopeId);
+      const projectIds = directAssocs.map((a) => a.scopeId);
+
+      // Also find projects that own any of those teamIds
+      const teamsWithProject = await TeamModel.find({
+        _id: { $in: teamIds },
+        workspaceId,
+        projectId: { $ne: null },
+      }).select("projectId");
+      const teamProjectIds = teamsWithProject.map((t) => t.projectId).filter(Boolean);
+
+      query.$or = [
+        { _id: { $in: [...projectIds, ...teamProjectIds] } },
+        { teams: { $in: teamIds } },
+        { team: { $in: teamIds } },
+        { createdBy: userId },
+      ];
+    } else {
+      query.createdBy = userId;
+    }
   }
 
   const totalCount = await ProjectModel.countDocuments(query);
@@ -254,6 +313,8 @@ export const getProjectsInWorkspaceService = async (
 export const getProjectByIdAndWorkspaceIdService = async (
   workspaceId: string,
   projectId: string,
+  userId?: string,
+  userRole?: string,
 ) => {
   const project = await ProjectModel.findOne({
     _id: projectId,
@@ -267,6 +328,45 @@ export const getProjectByIdAndWorkspaceIdService = async (
     throw new NotFoundException(
       "Project not found or does not belong to the specified workspace",
     );
+  }
+
+  // Requirement 1: workspace members (EMPLOYEE) can only view their assigned projects
+  if (userRole === WorkspaceRoles.EMPLOYEE && userId) {
+    const isCreator = project.createdBy?._id?.toString() === userId.toString();
+    if (!isCreator) {
+      const member = await MemberModel.findOne({ workspaceId, userId });
+      if (!member) {
+        throw new UnauthorizedException("You do not have access to this project");
+      }
+
+      const directAssoc = await AssociationModel.exists({
+        memberId: member._id,
+        workspaceId,
+        scopeType: AssociationScope.PROJECT,
+        scopeId: project._id,
+        status: AssociationStatus.ACTIVE,
+      });
+
+      if (!directAssoc) {
+        const projectTeamIds: any[] = [];
+        if (project.team) projectTeamIds.push((project.team as any)?._id || project.team);
+        if (project.teams && Array.isArray(project.teams)) {
+          project.teams.forEach((t: any) => projectTeamIds.push(t?._id || t));
+        }
+
+        const teamAssoc = await AssociationModel.exists({
+          memberId: member._id,
+          workspaceId,
+          scopeType: AssociationScope.TEAM,
+          scopeId: { $in: projectTeamIds },
+          status: AssociationStatus.ACTIVE,
+        });
+
+        if (!teamAssoc) {
+          throw new UnauthorizedException("You do not have access to this project");
+        }
+      }
+    }
   }
 
   return { project };
@@ -707,6 +807,7 @@ export const getProjectOverviewService = async (
 export const getProjectTeamsService = async (
   workspaceId: string,
   projectId: string,
+  filters?: any,
 ) => {
   const project = await ProjectModel.findOne({
     _id: projectId,
@@ -730,6 +831,12 @@ export const getProjectTeamsService = async (
       if (id) assignedTeamIds.add(id);
     });
   }
+
+  const teamsUnderProject = await TeamModel.find({
+    workspaceId,
+    projectId: project._id,
+  }).select("_id");
+  teamsUnderProject.forEach((t) => assignedTeamIds.add(t._id.toString()));
 
   if (assignedTeamIds.size === 0) {
     return { teams: [] };
@@ -897,6 +1004,7 @@ export const getProjectTeamsService = async (
 export const getProjectMembersService = async (
   workspaceId: string,
   projectId: string,
+  filters?: any,
 ) => {
   const project = await ProjectModel.findOne({
     _id: projectId,

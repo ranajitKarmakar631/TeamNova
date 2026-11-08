@@ -10,8 +10,10 @@ import {
   Loader,
   AlertCircle,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -23,6 +25,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import useWorkspaceId from "@/hooks/use-workspace-id";
+import useDebounce from "@/hooks/use-debounce";
 import { getProjectMembersQueryFn } from "@/lib/api";
 import { ProjectMemberItemType } from "@/types/api.type";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
@@ -33,6 +36,8 @@ export const ProjectMembers = () => {
   const workspaceId = useWorkspaceId();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 400);
+
   const [teamFilter, setTeamFilter] = useState("ALL");
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState<"tasks" | "completion" | "name">("tasks");
@@ -40,20 +45,37 @@ export const ProjectMembers = () => {
   const [selectedMember, setSelectedMember] = useState<ProjectMemberItemType | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["project-members", projectId],
+  // Fetch project members with debounced search, filters, and sorting handled on the backend
+  const { data, isLoading, isError, isFetching } = useQuery({
+    queryKey: [
+      "project-members",
+      projectId,
+      workspaceId,
+      debouncedSearch,
+      teamFilter,
+      roleFilter,
+      sortBy,
+    ],
     queryFn: () =>
       getProjectMembersQueryFn({
         workspaceId,
         projectId: projectId!,
+        search: debouncedSearch.trim() || undefined,
+        teamId: teamFilter !== "ALL" ? teamFilter : undefined,
+        role: roleFilter !== "ALL" ? roleFilter : undefined,
+        sortBy,
       }),
     enabled: Boolean(workspaceId && projectId),
   });
 
   const members = data?.members || [];
+  const totalCount = data?.totalCount ?? members.length;
 
-  // Extract unique team names for the filter dropdown
+  // Extract unique team names for the filter dropdown (provided by backend or fallback)
   const uniqueTeams = useMemo(() => {
+    if (data?.teams && data.teams.length > 0) {
+      return data.teams;
+    }
     const map = new Map<string, string>();
     members.forEach((m) => {
       m.teams?.forEach((t) => {
@@ -61,46 +83,18 @@ export const ProjectMembers = () => {
       });
     });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
-  }, [members]);
+  }, [data?.teams, members]);
 
-  // Filter and sort members
-  const filteredMembers = useMemo(() => {
-    return members
-      .filter((m) => {
-        // Search filter
-        const name = (m.user?.name || "").toLowerCase();
-        const email = (m.user?.email || "").toLowerCase();
-        const query = searchQuery.trim().toLowerCase();
-        if (query && !name.includes(query) && !email.includes(query)) {
-          return false;
-        }
+  const hasActiveFilters = Boolean(
+    searchQuery.trim() || teamFilter !== "ALL" || roleFilter !== "ALL"
+  );
 
-        // Team filter
-        if (teamFilter !== "ALL") {
-          const hasTeam = m.teams?.some((t) => t._id === teamFilter);
-          if (!hasTeam) return false;
-        }
-
-        // Role filter
-        if (roleFilter !== "ALL") {
-          if (m.projectRole !== roleFilter) return false;
-        }
-
-        return true;
-      })
-      .sort((a, b) => {
-        if (sortBy === "tasks") {
-          return b.totalAssignedTasks - a.totalAssignedTasks;
-        }
-        if (sortBy === "completion") {
-          return b.completionPercentage - a.completionPercentage;
-        }
-        if (sortBy === "name") {
-          return (a.user?.name || "").localeCompare(b.user?.name || "");
-        }
-        return 0;
-      });
-  }, [members, searchQuery, teamFilter, roleFilter, sortBy]);
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setTeamFilter("ALL");
+    setRoleFilter("ALL");
+    setSortBy("tasks");
+  };
 
   const handleOpenMember = (member: ProjectMemberItemType) => {
     setSelectedMember(member);
@@ -129,13 +123,30 @@ export const ProjectMembers = () => {
     <div className="space-y-4">
       {/* Header and Filter Controls */}
       <div className="space-y-3">
-        <div>
-          <h3 className="text-lg font-semibold tracking-tight text-foreground">
-            Project Contributors & Roles ({members.length})
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            All unique members collaborating on this project. Click any member to inspect assigned tasks and individual KPIs.
-          </p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-lg font-semibold tracking-tight text-foreground flex items-center gap-2">
+              <span>Project Contributors & Roles ({totalCount})</span>
+              {isFetching && !isLoading && (
+                <Loader className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+              )}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              All unique members collaborating on this project. Click any member to inspect assigned tasks and individual KPIs.
+            </p>
+          </div>
+
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetFilters}
+              className="text-xs h-8 text-muted-foreground hover:text-foreground gap-1 px-2.5"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Reset Filters</span>
+            </Button>
+          )}
         </div>
 
         {/* Toolbar */}
@@ -195,7 +206,7 @@ export const ProjectMembers = () => {
       </div>
 
       {/* Members List */}
-      {filteredMembers.length === 0 ? (
+      {members.length === 0 ? (
         <div className="text-center py-16 px-4 rounded-2xl border border-dashed bg-muted/20 space-y-2">
           <Users className="w-10 h-10 text-muted-foreground/40 mx-auto" />
           <h4 className="text-sm font-semibold text-foreground">No Members Found</h4>
@@ -205,7 +216,7 @@ export const ProjectMembers = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-          {filteredMembers.map((member) => {
+          {members.map((member) => {
             const name = member.user?.name || "Unknown Member";
             const initials = getAvatarFallbackText(name);
             const avatarColor = getAvatarColor(name);

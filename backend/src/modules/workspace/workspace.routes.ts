@@ -3,6 +3,7 @@ import {
   changeWorkspaceMemberRoleController,
   createWorkspaceController,
   deleteWorkspaceByIdController,
+  deleteWorkspaceMemberController,
   getAllWorkspacesUserIsMemberController,
   getWorkspaceAnalyticsController,
   getWorkspaceByIdController,
@@ -24,6 +25,9 @@ workspaceRoutes.get("/members/:workspaceId", getWorkspaceMembersController);
 workspaceRoutes.patch("/:workspaceId/members/role", changeWorkspaceMemberRoleController);
 workspaceRoutes.put("/:workspaceId/members/role", changeWorkspaceMemberRoleController);
 workspaceRoutes.put("/change/member/role/:workspaceId", changeWorkspaceMemberRoleController);
+workspaceRoutes.delete("/:workspaceId/members/:memberId", deleteWorkspaceMemberController);
+workspaceRoutes.delete("/members/:workspaceId/:memberId", deleteWorkspaceMemberController);
+workspaceRoutes.delete("/:workspaceId/members", deleteWorkspaceMemberController);
 workspaceRoutes.get("/:workspaceId/analytics", getWorkspaceAnalyticsController);
 workspaceRoutes.get("/analytics/:workspaceId", getWorkspaceAnalyticsController);
 

@@ -4,7 +4,12 @@ import { TaskPriorityEnum, TaskStatusEnum } from "./task.enum";
 export const titleSchema = z.string().trim().min(1).max(255);
 export const descriptionSchema = z.string().trim().optional();
 
-export const assignedToSchema = z.string().trim().min(1).nullable().optional();
+export const assignedToSchema = z
+  .union([z.string().trim().min(1), z.array(z.string().trim().min(1))])
+  .nullable()
+  .optional();
+
+export const reportedToSchema = z.string().trim().min(1).nullable().optional();
 
 export const prioritySchema = z.enum(
   Object.values(TaskPriorityEnum) as [string, ...string[]]
@@ -27,6 +32,8 @@ export const dueDateSchema = z
     }
   );
 
+export const teamIdSchema = z.string().trim().min(1).nullable().optional();
+
 export const taskIdSchema = z.string().trim().min(1);
 
 export const createTaskSchema = z.object({
@@ -35,14 +42,20 @@ export const createTaskSchema = z.object({
   priority: prioritySchema,
   status: statusSchema,
   assignedTo: assignedToSchema,
+  reportedTo: reportedToSchema,
   dueDate: dueDateSchema,
+  teamId: teamIdSchema,
+  team: teamIdSchema,
 });
 
 export const updateTaskSchema = z.object({
-  title: titleSchema,
+  title: titleSchema.optional(),
   description: descriptionSchema,
-  priority: prioritySchema,
-  status: statusSchema,
+  priority: prioritySchema.optional(),
+  status: statusSchema.optional(),
   assignedTo: assignedToSchema,
+  reportedTo: reportedToSchema,
   dueDate: dueDateSchema,
+  teamId: teamIdSchema,
+  team: teamIdSchema,
 });

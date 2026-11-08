@@ -71,7 +71,7 @@ Most backend features live under `backend/src/modules/<feature>/`. A module typi
 | `<feature>.validation.ts` | Defines request validation where present |
 | `index.ts` | Exports the module router |
 
-The current modules are `auth`, `user`, `workspace`, `member`, `project`, and `task`. The controller/service split keeps HTTP concerns separate from application logic; Mongoose models own persistence schemas.
+The current modules are `auth`, `user`, `workspace`, `member`, `project`, `task`, `teams`, `association`, `chats`, and `notification`. The controller/service split keeps HTTP concerns separate from application logic; Mongoose models own persistence schemas.
 
 ### Shared backend concerns
 
@@ -106,6 +106,7 @@ All paths below are relative to `BASE_PATH` (default `/api`):
 | `/member` | Join workspace using an invite code |
 | `/project` | Create/list/get/update/delete projects scoped to a workspace; project analytics |
 | `/task` | Create/list/get/update/delete tasks scoped to a project/workspace |
+| `/notifications` | List user notifications (paginated), unread count, mark read, mark all read, delete, clear, queue notifications |
 
 For exact request schemas and response behavior, use each feature's route, controller, validation, and service files as the source of truth.
 

@@ -40,6 +40,18 @@ export const useScopeMemberMutations = ({
       queryClient.invalidateQueries({
         queryKey: ["team-detail", scopeId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["project-teams"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["project-members"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["project-overview"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["project-analytics"],
+      });
     } else if (scopeType === "PROJECT") {
       queryClient.invalidateQueries({
         queryKey: ["allprojects", workspaceId],
@@ -52,6 +64,18 @@ export const useScopeMemberMutations = ({
       });
       queryClient.invalidateQueries({
         queryKey: ["project-overview", scopeId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["project-teams", scopeId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["all-teams", workspaceId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["project-analytics", scopeId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["workspace-analytics", workspaceId],
       });
     }
   };

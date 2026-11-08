@@ -23,8 +23,7 @@ const WorkspaceRedirect = () => {
     return <Navigate to={PROTECTED_ROUTES.CREATE_WORKSPACE} replace />;
   }
 
-  // return <Navigate to={`/workspace/${workspaceId}`} replace />;
-    return <Navigate to={`/chat`} replace />;
+  return <Navigate to={`/workspace/${workspaceId}`} replace />;
 
 };
 

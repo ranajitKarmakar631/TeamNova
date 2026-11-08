@@ -13,7 +13,18 @@ export const socketAuthMiddleware = async (
   next: (err?: Error) => void,
 ) => {
   try {
-    const token = socket.handshake.auth?.token;
+    let token = socket.handshake.auth?.token;
+
+    if (!token && socket.handshake.headers?.cookie) {
+      const rawCookies = socket.handshake.headers.cookie.split(";");
+      for (const cookie of rawCookies) {
+        const [name, val] = cookie.trim().split("=");
+        if (name === "accessToken" && val) {
+          token = decodeURIComponent(val);
+          break;
+        }
+      }
+    }
 
     if (!token) {
       throw new UnauthorizedException("Unauthorized. Please log in.");

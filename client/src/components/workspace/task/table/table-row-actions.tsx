@@ -44,6 +44,11 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
       {
         onSuccess: (data) => {
           queryClient.invalidateQueries({ queryKey: ["all-tasks", workspaceId] });
+          queryClient.invalidateQueries({ queryKey: ["workspace-analytics", workspaceId] });
+          if (task.project?._id) {
+            queryClient.invalidateQueries({ queryKey: ["project-analytics", task.project._id] });
+            queryClient.invalidateQueries({ queryKey: ["project-overview", task.project._id] });
+          }
           toast({ title: "Success", description: data.message, variant: "success" });
           setTimeout(() => setOpenDialog(false), 100);
         },

@@ -8,6 +8,9 @@ import { BadRequestException, NotFoundException } from "../../common/utils/appEr
 import { TaskStatusEnum } from "../task/task.enum";
 import ProjectModel from "../project/project.model";
 import { TaskModel } from "../task";
+import TeamModel from "../teams/teams.model";
+import AssociationModel from "../association/association.model";
+import WorkspaceInvitation from "../invite/invite.model";
 
 //********************************
 // CREATE NEW WORKSPACE
@@ -168,24 +171,86 @@ export const changeMemberRoleService = async (
     throw new BadRequestException("Cannot assign Owner role");
   }
 
-  const member = await MemberModel.findOne({
-    userId: memberId,
-    workspaceId: workspaceId,
-  });
+  const query = mongoose.isValidObjectId(memberId)
+    ? {
+        workspaceId,
+        $or: [{ _id: memberId }, { userId: memberId }],
+      }
+    : { workspaceId, userId: memberId };
+
+  const member = await MemberModel.findOne(query);
 
   if (!member) {
     throw new NotFoundException("Member not found in the workspace");
   }
 
-  if (workspace.owner?.toString() === member.userId.toString()) {
+  const ownerId = workspace.owner || workspace.ownerId;
+  if (ownerId && ownerId.toString() === member.userId.toString()) {
     throw new BadRequestException("Cannot change the role of the workspace owner");
   }
 
-  member.role = role;
+  member.role = role._id as any;
   await member.save();
 
   return {
     member,
+  };
+};
+
+export const removeWorkspaceMemberService = async (
+  workspaceId: string,
+  memberId: string,
+  currentUserId: string
+) => {
+  const workspace = await WorkspaceModel.findById(workspaceId);
+  if (!workspace) {
+    throw new NotFoundException("Workspace not found");
+  }
+
+  const query = mongoose.isValidObjectId(memberId)
+    ? {
+        workspaceId,
+        $or: [{ _id: memberId }, { userId: memberId }],
+      }
+    : { workspaceId, userId: memberId };
+
+  const member = await MemberModel.findOne(query);
+  if (!member) {
+    throw new NotFoundException("Member not found in the workspace");
+  }
+
+  const ownerId = workspace.owner || workspace.ownerId;
+  if (ownerId && ownerId.toString() === member.userId.toString()) {
+    throw new BadRequestException("Cannot remove the owner of the workspace");
+  }
+
+  // 1. Delete member record
+  await MemberModel.findByIdAndDelete(member._id);
+
+  // 2. Cascade delete all associations for this member in this workspace
+  await AssociationModel.deleteMany({
+    workspaceId,
+    memberId: member._id,
+  });
+
+  // 3. Unassign any tasks in this workspace assigned to this user
+  await TaskModel.updateMany(
+    { workspace: workspaceId, assignedTo: member.userId },
+    { $set: { assignedTo: null } }
+  );
+
+  // 4. Update currentWorkspace if the removed user currently has this workspace active
+  const targetUser = await UserModel.findById(member.userId);
+  if (targetUser && targetUser.currentWorkspace?.toString() === workspaceId.toString()) {
+    const anotherMembership = await MemberModel.findOne({ userId: member.userId });
+    targetUser.currentWorkspace = anotherMembership
+      ? (anotherMembership.workspaceId as any)
+      : null;
+    await targetUser.save();
+  }
+
+  return {
+    message: "Member removed from workspace successfully",
   };
 };
 
@@ -235,6 +300,9 @@ export const deleteWorkspaceService = async (
 
   await ProjectModel.deleteMany({ workspace: workspace._id });
   await TaskModel.deleteMany({ workspace: workspace._id });
+  await TeamModel.deleteMany({ workspaceId: workspace._id });
+  await AssociationModel.deleteMany({ workspaceId: workspace._id });
+  await WorkspaceInvitation.deleteMany({ workspaceId: workspace._id });
   await MemberModel.deleteMany({
     workspaceId: workspace._id,
   });

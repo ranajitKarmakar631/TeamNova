@@ -1,9 +1,10 @@
-import { FC, useState, useMemo } from "react";
+import { FC, useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { X, Search, Shield, UserCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import useWorkspaceId from "@/hooks/use-workspace-id";
+import useDebounce from "@/hooks/use-debounce";
 import { TeamType } from "@/types/api.type";
 import useTeamTableFilter from "@/hooks/use-teams-table-filter";
 import { getTeamColumns } from "./team-columns";
@@ -48,12 +49,14 @@ const TeamsTable = () => {
       pageNumber,
       filters.keyword,
       filters.status,
+      viewFilter,
     ],
     queryFn: () =>
       getAllTeamsQueryFn({
         workspaceId,
         keyword: filters.keyword,
         status: filters.status,
+        onlyMyTeams: viewFilter === "MY",
         pageNumber,
         pageSize,
       }),
@@ -61,10 +64,9 @@ const TeamsTable = () => {
     enabled: !!workspaceId,
   });
 
-  const rawTeams: TeamType[] = data?.teams || [];
+  const teams: TeamType[] = data?.teams || [];
   const totalCount = data?.pagination?.totalCount || 0;
 
-  // Filter teams by user associations if "MY" view selected
   const associatedTeamIds = useMemo(() => {
     return new Set(
       associations
@@ -72,13 +74,6 @@ const TeamsTable = () => {
         .map((a) => a.scopeId)
     );
   }, [associations]);
-
-  const teams = useMemo(() => {
-    if (viewFilter === "MY") {
-      return rawTeams.filter((t) => associatedTeamIds.has(t._id));
-    }
-    return rawTeams;
-  }, [rawTeams, viewFilter, associatedTeamIds]);
 
   const handlePageChange = (page: number) => {
     setPageNumber(page);
@@ -97,7 +92,7 @@ const TeamsTable = () => {
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
         pagination={{
-          totalCount: viewFilter === "MY" ? teams.length : totalCount,
+          totalCount,
           pageNumber,
           pageSize,
         }}
@@ -124,6 +119,22 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
   setViewFilter,
   myTeamsCount,
 }) => {
+  const [searchValue, setSearchValue] = useState(filters.keyword || "");
+  const debouncedSearch = useDebounce(searchValue, 400);
+
+  useEffect(() => {
+    setSearchValue(filters.keyword || "");
+  }, [filters.keyword]);
+
+  useEffect(() => {
+    if ((debouncedSearch || null) !== (filters.keyword || null)) {
+      setFilters({
+        ...filters,
+        keyword: debouncedSearch || null,
+      });
+    }
+  }, [debouncedSearch]);
+
   const handleFilterChange = (key: keyof Filters, values: string[]) => {
     setFilters({
       ...filters,
@@ -131,8 +142,8 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
     });
   };
 
-  const hasActiveFilters = Object.values(filters).some(
-    (value) => value !== null && value !== "" && value !== undefined
+  const hasActiveFilters = Boolean(
+    searchValue || filters.status
   );
 
   return (
@@ -142,13 +153,8 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Filter teams by name..."
-            value={filters.keyword || ""}
-            onChange={(e) =>
-              setFilters({
-                ...filters,
-                keyword: e.target.value || null,
-              })
-            }
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
             className="h-9 pl-8 w-full text-xs sm:text-sm"
           />
         </div>
@@ -168,12 +174,13 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
             disabled={isLoading}
             variant="ghost"
             className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() =>
+            onClick={() => {
+              setSearchValue("");
               setFilters({
                 keyword: null,
                 status: null,
-              })
-            }
+              });
+            }}
           >
             Reset
             <X className="ml-1 h-3.5 w-3.5" />

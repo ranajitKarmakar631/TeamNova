@@ -1,5 +1,6 @@
 import React from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { NotificationBell } from "@/components/notification";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -99,6 +100,9 @@ const Header = () => {
             })}
           </BreadcrumbList>
         </Breadcrumb>
+      </div>
+      <div className="flex items-center gap-2 pr-3">
+        <NotificationBell />
       </div>
     </header>
   );

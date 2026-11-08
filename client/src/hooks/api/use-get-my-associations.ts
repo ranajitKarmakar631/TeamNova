@@ -10,7 +10,7 @@ export const useGetMyAssociations = (workspaceIdParam?: string) => {
     queryKey: ["my-associations", workspaceId],
     queryFn: () => getMyAssociationsQueryFn(workspaceId),
     enabled: !!workspaceId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 1000,
   });
 };
 

@@ -61,6 +61,7 @@ export const updateTaskController = asyncHandler(
       workspaceId,
       projectId,
       taskId,
+      userId,
       body
     );
 
@@ -79,6 +80,9 @@ export const getAllTasksController = asyncHandler(
 
     const filters = {
       projectId: req.query.projectId as string | undefined,
+      teamId: req.query.teamId
+        ? (req.query.teamId as string)?.split(",")
+        : undefined,
       status: req.query.status
         ? (req.query.status as string)?.split(",")
         : undefined,

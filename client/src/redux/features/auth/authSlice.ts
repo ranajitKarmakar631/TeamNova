@@ -57,7 +57,13 @@ export const calculateWorkspacePermissions = (
   const members = (workspace as WorkspaceWithMembersType)?.members;
   if (!members || !Array.isArray(members)) return [];
 
-  const member = members.find((m) => m.userId === user._id);
+  const member = members.find((m) => {
+    const memberUid =
+      typeof m.userId === "object" && m.userId !== null
+        ? (m.userId as any)._id
+        : m.userId;
+    return String(memberUid) === String(user._id);
+  });
   if (member) {
     if (member.role?.permissions && member.role.permissions.length > 0) {
       return [...member.role.permissions];

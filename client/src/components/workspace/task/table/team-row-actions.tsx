@@ -55,6 +55,8 @@ export function TeamTableRowActions({ row }: TeamTableRowActionsProps) {
       {
         onSuccess: (data) => {
           queryClient.invalidateQueries({ queryKey: ["all-teams", workspaceId] });
+          queryClient.invalidateQueries({ queryKey: ["my-associations", workspaceId] });
+          queryClient.invalidateQueries({ queryKey: ["allprojects", workspaceId] });
           toast({
             title: "Success",
             description: data.message || "Team deleted successfully",

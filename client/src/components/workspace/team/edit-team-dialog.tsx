@@ -82,6 +82,9 @@ export const EditTeamDialog = ({
           queryClient.invalidateQueries({
             queryKey: ["team-detail", team._id],
           });
+          queryClient.invalidateQueries({
+            queryKey: ["project-teams"],
+          });
           toast({
             title: "Success",
             description: data?.message || "Team updated successfully",

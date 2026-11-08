@@ -44,3 +44,16 @@ export const assignTeamsSchema = z.object({
 });
 
 export const teamIdParamSchema = z.string().trim().min(1);
+
+export const getProjectMembersQuerySchema = z.object({
+  search: z.string().trim().optional(),
+  teamId: z.string().trim().optional(),
+  role: z.string().trim().optional(),
+  sortBy: z.enum(["tasks", "completion", "name"]).optional(),
+});
+
+export const getProjectTeamsQuerySchema = z.object({
+  search: z.string().trim().optional(),
+  status: z.string().trim().optional(),
+});
+

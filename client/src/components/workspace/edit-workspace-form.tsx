@@ -63,7 +63,7 @@ export default function EditWorkspaceForm() {
     mutate(payload, {
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: ["workspace"],
+          queryKey: ["workspace", workspaceId],
         });
         queryClient.invalidateQueries({
           queryKey: ["userWorkspaces"],

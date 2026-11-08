@@ -16,11 +16,13 @@ import {
   getWorkspaceAnalyticsService,
   getWorkspaceByIdService,
   getWorkspaceMembersService,
+  removeWorkspaceMemberService,
   updateWorkspaceByIdService,
 } from "./workspace.service";
 import { getMemberRoleInWorkspace } from "../member/member.service";
 import { Permissions } from "../../common/enums/association.enum";
 import { roleGuard } from "../../common/utils/roleGuard";
+import { BadRequestException } from "../../common/utils/appError";
 
 export const createWorkspaceController = asyncHandler(
   async (req: Request, res: Response) => {
@@ -130,6 +132,33 @@ export const changeWorkspaceMemberRoleController = asyncHandler(
     return res.status(HTTPSTATUS.OK).json({
       message: "Member Role changed successfully",
       member,
+    });
+  }
+);
+
+export const deleteWorkspaceMemberController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const workspaceId = workspaceIdSchema.parse(
+      req.params.workspaceId || req.params.id
+    );
+    const memberId = (req.params.memberId || req.body.memberId) as string;
+    if (!memberId) {
+      throw new BadRequestException("Member ID is required");
+    }
+
+    const userId = req.user?._id?.toString()!;
+
+    const { role } = await getMemberRoleInWorkspace(userId, workspaceId);
+    roleGuard(role, [Permissions.MEMBER_DELETE]);
+
+    const result = await removeWorkspaceMemberService(
+      workspaceId,
+      memberId,
+      userId
+    );
+
+    return res.status(HTTPSTATUS.OK).json({
+      message: result.message,
     });
   }
 );

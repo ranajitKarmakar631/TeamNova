@@ -26,6 +26,10 @@ const isAuthenticated = asyncHandler(
       throw new UnauthorizedException("User not found or session invalid.");
     }
 
+    if (!user.isActive) {
+      throw new UnauthorizedException("User account is deactivated or suspended.");
+    }
+
     req.user = user;
     next();
   }

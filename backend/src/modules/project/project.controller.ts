@@ -3,6 +3,8 @@ import { asyncHandler } from "../../common/middlewares/asyncHandler.middleware";
 import {
   assignTeamsSchema,
   createProjectSchema,
+  getProjectMembersQuerySchema,
+  getProjectTeamsQuerySchema,
   projectIdSchema,
   teamIdParamSchema,
   updateProjectSchema,
@@ -58,13 +60,18 @@ export const getAllProjectsInWorkspaceController = asyncHandler(
     const pageSize = parseInt(req.query.pageSize as string) || 10;
     const pageNumber = parseInt(req.query.pageNumber as string) || 1;
     const keyword = req.query.keyword as string | undefined;
+    const onlyMyProjects =
+      req.query.onlyMyProjects === "true" || req.query.view === "MY";
 
     const { projects, totalCount, totalPages, skip } =
       await getProjectsInWorkspaceService(
         workspaceId,
         pageSize,
         pageNumber,
-        keyword
+        keyword,
+        userId?.toString(),
+        onlyMyProjects,
+        role
       );
 
     return res.status(HTTPSTATUS.OK).json({
@@ -126,7 +133,9 @@ export const getProjectByIdAndWorkspaceIdController = asyncHandler(
 
     const { project } = await getProjectByIdAndWorkspaceIdService(
       workspaceId,
-      projectId
+      projectId,
+      userId?.toString(),
+      role
     );
 
     return res.status(HTTPSTATUS.OK).json({
@@ -238,7 +247,9 @@ export const getProjectTeamsController = asyncHandler(
     const { role } = await getMemberRoleInWorkspace(userId, workspaceId);
     roleGuard(role, [Permissions.PROJECT_READ]);
 
-    const data = await getProjectTeamsService(workspaceId, projectId);
+    const filters = getProjectTeamsQuerySchema.parse(req.query);
+
+    const data = await getProjectTeamsService(workspaceId, projectId, filters);
 
     return res.status(HTTPSTATUS.OK).json({
       message: "Project teams retrieved successfully",
@@ -258,7 +269,9 @@ export const getProjectMembersController = asyncHandler(
     const { role } = await getMemberRoleInWorkspace(userId, workspaceId);
     roleGuard(role, [Permissions.PROJECT_READ]);
 
-    const data = await getProjectMembersService(workspaceId, projectId);
+    const filters = getProjectMembersQuerySchema.parse(req.query);
+
+    const data = await getProjectMembersService(workspaceId, projectId, filters);
 
     return res.status(HTTPSTATUS.OK).json({
       message: "Project members retrieved successfully",

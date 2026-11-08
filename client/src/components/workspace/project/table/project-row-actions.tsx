@@ -56,6 +56,18 @@ export function ProjectTableRowActions({ row }: ProjectTableRowActionsProps) {
           queryClient.invalidateQueries({
             queryKey: ["allprojects", workspaceId],
           });
+          queryClient.invalidateQueries({
+            queryKey: ["all-tasks", workspaceId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["workspace-analytics", workspaceId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["my-associations", workspaceId],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["all-teams", workspaceId],
+          });
           toast({
             title: "Success",
             description: data?.message || "Project deleted successfully",

@@ -267,6 +267,17 @@ export const assignMemberToScopeService = async (
         });
       }
 
+      // Also find teams created under this project
+      const teamsUnderProject = await TeamModel.find({
+        workspaceId,
+        projectId: project._id,
+      }).select("_id");
+      teamsUnderProject.forEach((t) => {
+        if (!assignedTeamIds.some((id) => id.equals(t._id))) {
+          assignedTeamIds.push(t._id);
+        }
+      });
+
       if (assignedTeamIds.length > 0) {
         const teamAssoc = await AssociationModel.findOne({
           memberId: member._id,
@@ -278,7 +289,50 @@ export const assignMemberToScopeService = async (
 
         if (teamAssoc) {
           throw new BadRequestException(
-            "This member is already part of this project through an assigned team"
+            "This member is already part of this project through an assigned team. Duplicate memberships are not allowed."
+          );
+        }
+      }
+    }
+  } else if (scopeType === AssociationScope.TEAM) {
+    // 3c. For TEAM scopes: prevent member duplication in the project
+    const teamDoc = await TeamModel.findOne({ _id: scopeId, workspaceId });
+    if (teamDoc && teamDoc.projectId) {
+      // Check if already assigned to project independently
+      const directAssoc = await AssociationModel.findOne({
+        memberId: member._id,
+        workspaceId,
+        scopeType: AssociationScope.PROJECT,
+        scopeId: teamDoc.projectId,
+        status: AssociationStatus.ACTIVE,
+      });
+
+      if (directAssoc) {
+        throw new BadRequestException(
+          "This member is already assigned to this project independently. Duplicate memberships are not allowed."
+        );
+      }
+
+      // Check if already in another team under the same project
+      const otherTeams = await TeamModel.find({
+        workspaceId,
+        projectId: teamDoc.projectId,
+        _id: { $ne: teamDoc._id },
+      }).select("_id");
+      const otherTeamIds = otherTeams.map((t) => t._id);
+
+      if (otherTeamIds.length > 0) {
+        const otherTeamAssoc = await AssociationModel.findOne({
+          memberId: member._id,
+          workspaceId,
+          scopeType: AssociationScope.TEAM,
+          scopeId: { $in: otherTeamIds },
+          status: AssociationStatus.ACTIVE,
+        });
+
+        if (otherTeamAssoc) {
+          throw new BadRequestException(
+            "This member is already part of another team in this project. Duplicate memberships are not allowed."
           );
         }
       }
@@ -320,6 +374,9 @@ export const assignMemberToScopeService = async (
       joinedAt: new Date(),
     });
   }
+
+  // NOTE: Members joined under a team belong to the project through their team,
+  // and do NOT have an independent project association (preventing duplication).
 
   await populateAssociation(association);
 
@@ -379,7 +436,7 @@ export const removeMemberFromScopeService = async (
     await verifyScopePermission(currentUserId, workspaceId, scopeType, scopeId, "MANAGE");
   }
 
-  const association = await AssociationModel.findOne({
+  let association = await AssociationModel.findOne({
     memberId: member._id,
     workspaceId,
     scopeType,
@@ -388,13 +445,148 @@ export const removeMemberFromScopeService = async (
   });
 
   if (!association) {
-    throw new NotFoundException(
-      `Active association not found for this member in ${scopeType.toLowerCase()}`
+    // If no active association exists, upsert a REMOVED association so the removal is explicitly recorded
+    association = await AssociationModel.findOneAndUpdate(
+      {
+        memberId: member._id,
+        workspaceId,
+        scopeType,
+        scopeId,
+      },
+      {
+        $set: {
+          status: AssociationStatus.REMOVED,
+        },
+      },
+      { upsert: true, new: true }
+    );
+  } else {
+    association.status = AssociationStatus.REMOVED;
+    await association.save();
+  }
+
+  // If removed from a Project:
+  // Requirement 6: "if someone is removed from the project, he should be removed from the team in which he is joined."
+  if (scopeType === AssociationScope.PROJECT) {
+    // 1. Find all teams under this project
+    const projectDoc = await ProjectModel.findOne({ _id: scopeId, workspace: workspaceId });
+    const teamsUnderProject = await TeamModel.find({
+      workspaceId,
+      projectId: scopeId,
+    }).select("_id");
+
+    const allProjectTeamIds: mongoose.Types.ObjectId[] = teamsUnderProject.map((t) => t._id);
+    if (projectDoc) {
+      if (projectDoc.team && !allProjectTeamIds.some((id) => id.equals(projectDoc.team!))) {
+        allProjectTeamIds.push(new mongoose.Types.ObjectId(projectDoc.team.toString()));
+      }
+      if (projectDoc.teams && Array.isArray(projectDoc.teams)) {
+        projectDoc.teams.forEach((t: any) => {
+          const tid = (t?._id || t) as mongoose.Types.ObjectId;
+          if (tid && !allProjectTeamIds.some((id) => id.equals(tid))) {
+            allProjectTeamIds.push(new mongoose.Types.ObjectId(tid.toString()));
+          }
+        });
+      }
+    }
+
+    // 2. Cascade remove member from any team under this project
+    if (allProjectTeamIds.length > 0) {
+      await AssociationModel.updateMany(
+        {
+          workspaceId,
+          memberId: member._id,
+          scopeType: AssociationScope.TEAM,
+          scopeId: { $in: allProjectTeamIds },
+          status: AssociationStatus.ACTIVE,
+        },
+        {
+          $set: { status: AssociationStatus.REMOVED },
+        }
+      );
+    }
+
+    // 3. Unassign tasks in this project assigned to this user
+    await TaskModel.updateMany(
+      {
+        workspace: workspaceId,
+        project: scopeId,
+        assignedTo: member.userId,
+      },
+      {
+        $pull: { assignedTo: member.userId },
+      }
     );
   }
 
-  association.status = AssociationStatus.REMOVED;
-  await association.save();
+  // If removed from a Team, check if member is part of any other active team in projects assigned to this team
+  if (scopeType === AssociationScope.TEAM) {
+    const teamProjects = await ProjectModel.find({
+      workspace: workspaceId,
+      $or: [{ team: scopeId }, { teams: scopeId }],
+    });
+
+    for (const proj of teamProjects) {
+      // Do not remove the project creator from the project
+      if (proj.createdBy && proj.createdBy.toString() === member.userId.toString()) {
+        continue;
+      }
+
+      const otherAssignedTeamIds: mongoose.Types.ObjectId[] = [];
+      if (proj.team && proj.team.toString() !== scopeId.toString()) {
+        otherAssignedTeamIds.push(new mongoose.Types.ObjectId(proj.team.toString()));
+      }
+      if (proj.teams && Array.isArray(proj.teams)) {
+        proj.teams.forEach((t: any) => {
+          const id = (t?._id || t).toString();
+          if (id && id !== scopeId.toString()) {
+            otherAssignedTeamIds.push(new mongoose.Types.ObjectId(id));
+          }
+        });
+      }
+
+      let hasOtherTeam = false;
+      if (otherAssignedTeamIds.length > 0) {
+        const count = await AssociationModel.countDocuments({
+          memberId: member._id,
+          workspaceId,
+          scopeType: AssociationScope.TEAM,
+          scopeId: { $in: otherAssignedTeamIds },
+          status: AssociationStatus.ACTIVE,
+        });
+        if (count > 0) hasOtherTeam = true;
+      }
+
+      if (!hasOtherTeam) {
+        // Only remove if they are a regular MEMBER (do not remove if HEAD or LEAD)
+        const projAssoc = await AssociationModel.findOne({
+          memberId: member._id,
+          workspaceId,
+          scopeType: AssociationScope.PROJECT,
+          scopeId: proj._id,
+          status: AssociationStatus.ACTIVE,
+        });
+
+        if (projAssoc && projAssoc.role === AssociationRoles.MEMBER) {
+          await AssociationModel.updateOne(
+            { _id: projAssoc._id },
+            { $set: { status: AssociationStatus.REMOVED } }
+          );
+
+          await TaskModel.updateMany(
+            {
+              workspace: workspaceId,
+              project: proj._id,
+              assignedTo: member.userId,
+            },
+            {
+              $set: { assignedTo: null },
+            }
+          );
+        }
+      }
+    }
+  }
 
   return {
     message: isSelf
@@ -413,7 +605,8 @@ export const getScopeMembersService = async (
   scopeType: AssociationScopeType,
   scopeId: string,
   status: AssociationStatusType = AssociationStatus.ACTIVE,
-  role?: AssociationRoleType
+  role?: AssociationRoleType,
+  search?: string
 ) => {
   await verifyScopePermission(currentUserId, workspaceId, scopeType, scopeId, "READ");
   const scopeDoc: any = await validateScopeExists(workspaceId, scopeType, scopeId);
@@ -430,7 +623,7 @@ export const getScopeMembersService = async (
   }
 
   const query = AssociationModel.find(filter).sort({ role: 1, createdAt: 1 });
-  const members = await populateAssociation(query).exec();
+  const allMembers = await populateAssociation(query).exec();
 
   const roleStats = {
     [AssociationRoles.HEAD]: 0,
@@ -438,11 +631,22 @@ export const getScopeMembersService = async (
     [AssociationRoles.MEMBER]: 0,
   };
 
-  members.forEach((member: any) => {
+  allMembers.forEach((member: any) => {
     if (roleStats[member.role as AssociationRoleType] !== undefined) {
       roleStats[member.role as AssociationRoleType]++;
     }
   });
+
+  let members = allMembers;
+  if (search && search.trim() !== "") {
+    const s = search.trim().toLowerCase();
+    members = allMembers.filter((m: any) => {
+      const u = m.memberId?.userId;
+      const name = (u?.name || "").toLowerCase();
+      const email = (u?.email || "").toLowerCase();
+      return name.includes(s) || email.includes(s);
+    });
+  }
 
   return {
     members,
@@ -552,6 +756,43 @@ export const getAvailableScopeMembersService = async (
         excludedMemberIdSet.add(ta.memberId.toString());
       }
     });
+
+    // Requirement 2: No duplication of member in a project (independently or under another team)
+    const resolvedProjectId = team.projectId;
+    if (resolvedProjectId) {
+      // Exclude members joined directly to the project
+      const directProjectAssocs = await AssociationModel.find({
+        workspaceId,
+        scopeType: AssociationScope.PROJECT,
+        scopeId: resolvedProjectId,
+        status: AssociationStatus.ACTIVE,
+      }).select("memberId");
+
+      directProjectAssocs.forEach((pa) => {
+        if (pa.memberId) excludedMemberIdSet.add(pa.memberId.toString());
+      });
+
+      // Exclude members joined in other teams under the same project
+      const otherTeams = await TeamModel.find({
+        workspaceId,
+        projectId: resolvedProjectId,
+        _id: { $ne: team._id },
+      }).select("_id");
+      const otherTeamIds = otherTeams.map((t) => t._id);
+
+      if (otherTeamIds.length > 0) {
+        const otherTeamAssocs = await AssociationModel.find({
+          workspaceId,
+          scopeType: AssociationScope.TEAM,
+          scopeId: { $in: otherTeamIds },
+          status: AssociationStatus.ACTIVE,
+        }).select("memberId");
+
+        otherTeamAssocs.forEach((ota) => {
+          if (ota.memberId) excludedMemberIdSet.add(ota.memberId.toString());
+        });
+      }
+    }
   }
 
   // Convert excluded member IDs to ObjectIds

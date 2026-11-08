@@ -74,6 +74,7 @@ export const getScopeMembersQuerySchema = z.object({
   workspaceId: z.string().trim().min(1, "Workspace ID is required"),
   status: statusSchema.optional().default(AssociationStatus.ACTIVE),
   role: roleSchema.optional(),
+  search: z.string().trim().optional(),
 });
 
 export const getAvailableScopeMembersQuerySchema = z.object({

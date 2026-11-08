@@ -47,7 +47,7 @@ export default function EditProjectForm(props: {
   const projectId = project?._id as string;
 
   const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
-    queryKey: ["allteams", workspaceId],
+    queryKey: ["all-teams", workspaceId],
     queryFn: () => getAllTeamsQueryFn({ workspaceId, pageSize: 100 }),
     enabled: Boolean(workspaceId),
   });
@@ -126,7 +126,19 @@ export default function EditProjectForm(props: {
         });
 
         queryClient.invalidateQueries({
+          queryKey: ["project-members", projectId],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ["available-scope-members"],
+        });
+
+        queryClient.invalidateQueries({
           queryKey: ["allprojects", workspaceId],
+        });
+
+        queryClient.invalidateQueries({
+          queryKey: ["all-teams", workspaceId],
         });
 
         toast({

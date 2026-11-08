@@ -1,5 +1,10 @@
 import API from "./axios-client";
 import {
+  NotificationItemType,
+  NotificationsResponseType,
+  UnreadCountResponseType,
+} from "@/types/notification.type";
+import {
   AllMembersInWorkspaceResponseType,
   AllProjectPayloadType,
   AllProjectResponseType,
@@ -20,6 +25,8 @@ import {
   ProjectTeamsResponseType,
   ProjectMembersResponseType,
   ProjectMemberTasksResponseType,
+  GetProjectMembersPayloadType,
+  GetProjectTeamsPayloadType,
 } from "../types/api.type";
 import {
   AllWorkspaceResponseType,
@@ -123,6 +130,19 @@ export const changeWorkspaceMemberRoleMutationFn = async ({
   return response.data;
 };
 
+export const deleteWorkspaceMemberMutationFn = async ({
+  workspaceId,
+  memberId,
+}: {
+  workspaceId: string;
+  memberId: string;
+}): Promise<{ message: string }> => {
+  const response = await API.delete(
+    `/workspace/${workspaceId}/members/${memberId}`
+  );
+  return response.data;
+};
+
 export const deleteWorkspaceMutationFn = async (
   workspaceId: string
 ): Promise<{
@@ -175,11 +195,13 @@ export const getProjectsInWorkspaceQueryFn = async ({
   pageSize = 10,
   pageNumber = 1,
   keyword,
+  onlyMyProjects,
 }: AllProjectPayloadType): Promise<AllProjectResponseType> => {
   const queryParams = new URLSearchParams();
   if (keyword) queryParams.append("keyword", keyword);
   if (pageSize) queryParams.append("pageSize", pageSize.toString());
   if (pageNumber) queryParams.append("pageNumber", pageNumber.toString());
+  if (onlyMyProjects) queryParams.append("onlyMyProjects", "true");
 
   const response = await API.get(
     `/project/workspace/${workspaceId}/all?${queryParams.toString()}`
@@ -253,9 +275,16 @@ export const getProjectOverviewQueryFn = async ({
 export const getProjectTeamsQueryFn = async ({
   workspaceId,
   projectId,
-}: ProjectByIdPayloadType): Promise<ProjectTeamsResponseType> => {
+  search,
+  status,
+}: GetProjectTeamsPayloadType): Promise<ProjectTeamsResponseType> => {
+  const queryParams = new URLSearchParams();
+  if (search) queryParams.append("search", search);
+  if (status && status !== "ALL") queryParams.append("status", status);
+
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
   const response = await API.get(
-    `/project/${projectId}/workspace/${workspaceId}/teams`
+    `/project/${projectId}/workspace/${workspaceId}/teams${queryString}`
   );
   return response.data;
 };
@@ -263,9 +292,20 @@ export const getProjectTeamsQueryFn = async ({
 export const getProjectMembersQueryFn = async ({
   workspaceId,
   projectId,
-}: ProjectByIdPayloadType): Promise<ProjectMembersResponseType> => {
+  search,
+  teamId,
+  role,
+  sortBy,
+}: GetProjectMembersPayloadType): Promise<ProjectMembersResponseType> => {
+  const queryParams = new URLSearchParams();
+  if (search) queryParams.append("search", search);
+  if (teamId && teamId !== "ALL") queryParams.append("teamId", teamId);
+  if (role && role !== "ALL") queryParams.append("role", role);
+  if (sortBy) queryParams.append("sortBy", sortBy);
+
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
   const response = await API.get(
-    `/project/${projectId}/workspace/${workspaceId}/members`
+    `/project/${projectId}/workspace/${workspaceId}/members${queryString}`
   );
   return response.data;
 };
@@ -341,6 +381,7 @@ export const getAllTasksQueryFn = async ({
   workspaceId,
   keyword,
   projectId,
+  teamId,
   assignedTo,
   priority,
   status,
@@ -353,6 +394,7 @@ export const getAllTasksQueryFn = async ({
   const queryParams = new URLSearchParams();
   if (keyword) queryParams.append("keyword", keyword);
   if (projectId) queryParams.append("projectId", projectId);
+  if (teamId) queryParams.append("teamId", teamId);
   if (assignedTo) queryParams.append("assignedTo", assignedTo);
   if (priority) queryParams.append("priority", priority);
   if (status) queryParams.append("status", status);
@@ -452,15 +494,19 @@ export const getAllTeamsQueryFn = async ({
   workspaceId,
   keyword,
   status,
+  projectId,
   pageNumber,
   pageSize,
+  onlyMyTeams,
 }: AllTeamsPayloadType): Promise<AllTeamsResponseType> => {
   const baseUrl = `/team/workspace/${workspaceId}/all`;
   const queryParams = new URLSearchParams();
   if (keyword) queryParams.append("keyword", keyword);
   if (status) queryParams.append("status", status);
+  if (projectId) queryParams.append("projectId", projectId);
   if (pageNumber) queryParams.append("pageNumber", pageNumber.toString());
   if (pageSize) queryParams.append("pageSize", pageSize.toString());
+  if (onlyMyTeams) queryParams.append("onlyMyTeams", "true");
 
   const url = queryParams.toString() ? `${baseUrl}?${queryParams}` : baseUrl;
   const response = await API.get(url);
@@ -527,16 +573,19 @@ export const getScopeMembersQueryFn = async ({
   scopeId,
   status,
   role,
+  search,
 }: {
   workspaceId: string;
   scopeType: AssociationScopeType;
   scopeId: string;
   status?: string;
   role?: AssociationRoleType;
+  search?: string;
 }): Promise<ScopeMembersResponseType> => {
   const params = new URLSearchParams({ workspaceId });
   if (status) params.append("status", status);
   if (role) params.append("role", role);
+  if (search) params.append("search", search);
 
   const response = await API.get(
     `/association/scope/${scopeType}/${scopeId}?${params.toString()}`
@@ -584,5 +633,71 @@ export const getAvailableScopeMembersQueryFn = async ({
   );
   return response.data;
 };
+
+// ==========================================
+// NOTIFICATIONS API
+// ==========================================
+
+export const getNotificationsQueryFn = async (params?: {
+  page?: number;
+  limit?: number;
+  isRead?: boolean;
+  workspaceId?: string;
+}): Promise<NotificationsResponseType> => {
+  const queryParams = new URLSearchParams();
+  if (params?.page) queryParams.append("page", String(params.page));
+  if (params?.limit) queryParams.append("limit", String(params.limit));
+  if (params?.isRead !== undefined)
+    queryParams.append("isRead", String(params.isRead));
+  if (params?.workspaceId)
+    queryParams.append("workspaceId", params.workspaceId);
+
+  const queryStr = queryParams.toString();
+  const response = await API.get(
+    `/notifications${queryStr ? `?${queryStr}` : ""}`
+  );
+  return response.data;
+};
+
+export const getUnreadNotificationCountQueryFn = async (
+  workspaceId?: string
+): Promise<UnreadCountResponseType> => {
+  const params = workspaceId ? `?workspaceId=${workspaceId}` : "";
+  const response = await API.get(`/notifications/unread-count${params}`);
+  return response.data;
+};
+
+export const markNotificationAsReadMutationFn = async (
+  notificationId: string
+): Promise<{
+  message: string;
+  notification: NotificationItemType;
+  unreadCount: number;
+}> => {
+  const response = await API.patch(`/notifications/${notificationId}/read`);
+  return response.data;
+};
+
+export const markAllNotificationsAsReadMutationFn = async (payload?: {
+  workspaceId?: string;
+}): Promise<{ message: string; unreadCount: number }> => {
+  const response = await API.patch("/notifications/read-all", payload || {});
+  return response.data;
+};
+
+export const deleteNotificationMutationFn = async (
+  notificationId: string
+): Promise<{ message: string; unreadCount: number }> => {
+  const response = await API.delete(`/notifications/${notificationId}`);
+  return response.data;
+};
+
+export const clearAllNotificationsMutationFn = async (payload?: {
+  workspaceId?: string;
+}): Promise<{ message: string; unreadCount: number }> => {
+  const response = await API.delete("/notifications", { data: payload });
+  return response.data;
+};
+
 
 

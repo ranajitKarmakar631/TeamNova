@@ -10,10 +10,14 @@ import {
   Check,
   ChevronDown,
   UserCheck,
+  Search,
+  X,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import useDebounce from "@/hooks/use-debounce";
 import {
   Dialog,
   DialogContent,
@@ -100,11 +104,15 @@ export const ScopeMembersList = ({
     null
   );
 
-  // Queries
-  const { data: scopeData, isLoading: isScopeLoading } = useGetScopeMembers({
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 400);
+
+  // Queries (with debounced search performed on the backend)
+  const { data: scopeData, isLoading: isScopeLoading, isFetching: isScopeFetching } = useGetScopeMembers({
     workspaceId,
     scopeType,
     scopeId,
+    search: debouncedSearch.trim() || undefined,
   });
 
   // Fetch members available to join, filtered on the backend
@@ -293,6 +301,33 @@ export const ScopeMembersList = ({
         </div>
       </div>
 
+      {/* Search Toolbar */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search members by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 text-xs h-9 bg-card"
+          />
+        </div>
+        {searchQuery && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSearchQuery("")}
+            className="text-xs h-9 gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Clear</span>
+          </Button>
+        )}
+        {isScopeFetching && !isScopeLoading && (
+          <Loader className="w-4 h-4 animate-spin text-muted-foreground ml-auto" />
+        )}
+      </div>
+
       {/* Member List */}
       <div className="rounded-xl border bg-card overflow-hidden divide-y divide-border">
         {isScopeLoading ? (
@@ -302,32 +337,50 @@ export const ScopeMembersList = ({
         ) : members.length === 0 ? (
           <div className="text-center py-10 px-4">
             <Users className="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
-            <p className="text-sm font-medium text-foreground">No members assigned yet</p>
+            <p className="text-sm font-medium text-foreground">
+              {searchQuery ? "No matching members found" : "No members assigned yet"}
+            </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Add workspace members to collaborate in this {scopeType.toLowerCase()}.
+              {searchQuery
+                ? `No members matched "${searchQuery}". Try a different search.`
+                : `Add workspace members to collaborate in this ${scopeType.toLowerCase()}.`}
             </p>
             <div className="flex items-center justify-center gap-2 mt-4">
-              {!readOnly && !isUserJoined && (
+              {searchQuery ? (
                 <Button
                   size="sm"
+                  variant="outline"
+                  onClick={() => setSearchQuery("")}
                   className="gap-1.5"
-                  onClick={handleJoinScope}
-                  disabled={assignMemberMutation.isPending}
                 >
-                  <UserCheck className="w-3.5 h-3.5" />
-                  Join {scopeType === "TEAM" ? "Team" : "Project"}
+                  <X className="w-3.5 h-3.5" />
+                  <span>Clear Search</span>
                 </Button>
-              )}
-              {canManageMembers && (
-                <Button
-                  variant={!isUserJoined ? "outline" : "default"}
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => setIsAddDialogOpen(true)}
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  Assign Member
-                </Button>
+              ) : (
+                <>
+                  {!readOnly && !isUserJoined && (
+                    <Button
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={handleJoinScope}
+                      disabled={assignMemberMutation.isPending}
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      Join {scopeType === "TEAM" ? "Team" : "Project"}
+                    </Button>
+                  )}
+                  {canManageMembers && (
+                    <Button
+                      variant={!isUserJoined ? "outline" : "default"}
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => setIsAddDialogOpen(true)}
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      Assign Member
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>

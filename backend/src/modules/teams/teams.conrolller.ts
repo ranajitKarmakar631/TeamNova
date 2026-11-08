@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { TeamService } from "./teams.service";
+import TeamModel from "./teams.model";
 import { asyncHandler } from "../../common/middlewares/asyncHandler.middleware";
 import { HTTPSTATUS } from "../../config/http.config";
 import { getMemberRoleInWorkspace } from "../member/member.service";
@@ -29,11 +30,12 @@ export class TeamController {
       throw new UnauthorizedException("Unauthorized");
     }
 
-    try {
-      const { role } = await getMemberRoleInWorkspace(userId, workspaceId);
-      roleGuard(role, [Permissions.TEAM_CREATE]);
-    } catch (err: any) {
-      console.warn("Permission check notice for TEAM_CREATE:", err?.message);
+    const { role } = await getMemberRoleInWorkspace(userId.toString(), workspaceId);
+    roleGuard(role, [Permissions.TEAM_CREATE]);
+
+    const projectId = (req.body.projectId || req.params.projectId || req.query.projectId) as string;
+    if (!projectId) {
+      throw new BadRequestException("Project ID is required. Teams cannot be created independently.");
     }
 
     const { name, description, status, members } = req.body;
@@ -45,6 +47,7 @@ export class TeamController {
       name.trim(),
       workspaceId,
       userId?.toString() as string,
+      projectId,
       description,
       status,
       members
@@ -59,22 +62,28 @@ export class TeamController {
 
   handleGetAllTeamsInWorkspace = asyncHandler(async (req: Request, res: Response) => {
     const workspaceId = (req.params.workspaceId || req.query.workspaceId) as string;
-    const userId = req.user?._id;
-
-    if (workspaceId && userId) {
-      try {
-        const { role } = await getMemberRoleInWorkspace(userId, workspaceId);
-        roleGuard(role, [Permissions.TEAM_READ]);
-      } catch {
-        // Continue if workspace member
-      }
+    if (!workspaceId) {
+      throw new BadRequestException("Workspace ID is required");
     }
+
+    const userId = req.user?._id;
+    if (!userId) {
+      throw new UnauthorizedException("Unauthorized");
+    }
+
+    const { role } = await getMemberRoleInWorkspace(userId.toString(), workspaceId);
+    roleGuard(role, [Permissions.TEAM_READ]);
 
     const filters = {
       keyword: req.query.keyword as string | undefined,
       status: req.query.status
         ? (req.query.status as string).split(",")
         : undefined,
+      onlyMyTeams:
+        req.query.onlyMyTeams === "true" || req.query.view === "MY",
+      userId: userId?.toString(),
+      projectId: (req.query.projectId || req.params.projectId) as string | undefined,
+      userRole: role,
     };
 
     const pagination = {
@@ -92,9 +101,22 @@ export class TeamController {
 
   handleDetails = asyncHandler(async (req: Request, res: Response) => {
     const teamId = (req.params.teamId || req.params.id) as string;
-    const workspaceId = (req.params.workspaceId || req.query.workspaceId) as string | undefined;
+    let workspaceId = (req.params.workspaceId || req.query.workspaceId) as string | undefined;
+    const userId = req.user?._id;
+    if (!userId) {
+      throw new UnauthorizedException("Unauthorized");
+    }
 
-    const team = await this.teamService.getTeam(teamId, workspaceId);
+    const { role } = workspaceId
+      ? await getMemberRoleInWorkspace(userId.toString(), workspaceId)
+      : { role: undefined };
+
+    const team = await this.teamService.getTeam(teamId, workspaceId, userId.toString(), role);
+    const resolvedWorkspaceId = workspaceId || (team as any).workspaceId?.toString();
+    if (resolvedWorkspaceId && !role) {
+      const memberInfo = await getMemberRoleInWorkspace(userId.toString(), resolvedWorkspaceId);
+      roleGuard(memberInfo.role, [Permissions.TEAM_READ]);
+    }
 
     return res.status(HTTPSTATUS.OK).json({
       message: "Team fetched successfully",
@@ -104,17 +126,22 @@ export class TeamController {
 
   handleUpdate = asyncHandler(async (req: Request, res: Response) => {
     const teamId = (req.params.teamId || req.params.id) as string;
-    const workspaceId = (req.params.workspaceId || req.body.workspaceId) as string;
+    let workspaceId = (req.params.workspaceId || req.body.workspaceId) as string;
     const userId = req.user?._id;
-
-    if (workspaceId && userId) {
-      try {
-        const { role } = await getMemberRoleInWorkspace(userId, workspaceId);
-        roleGuard(role, [Permissions.TEAM_UPDATE]);
-      } catch {
-        // Continue
-      }
+    if (!userId) {
+      throw new UnauthorizedException("Unauthorized");
     }
+
+    if (!workspaceId) {
+      const existing = await TeamModel.findById(teamId);
+      if (!existing) {
+        throw new BadRequestException("Team not found");
+      }
+      workspaceId = existing.workspaceId.toString();
+    }
+
+    const { role } = await getMemberRoleInWorkspace(userId.toString(), workspaceId);
+    roleGuard(role, [Permissions.TEAM_UPDATE]);
 
     const { name, description, status } = req.body;
     const team = await this.teamService.updateTeam(teamId, workspaceId, {
@@ -131,17 +158,22 @@ export class TeamController {
 
   handleDelete = asyncHandler(async (req: Request, res: Response) => {
     const teamId = (req.params.teamId || req.params.id) as string;
-    const workspaceId = (req.params.workspaceId || req.query.workspaceId) as string;
+    let workspaceId = (req.params.workspaceId || req.query.workspaceId) as string;
     const userId = req.user?._id;
-
-    if (workspaceId && userId) {
-      try {
-        const { role } = await getMemberRoleInWorkspace(userId, workspaceId);
-        roleGuard(role, [Permissions.TEAM_DELETE]);
-      } catch {
-        // Continue
-      }
+    if (!userId) {
+      throw new UnauthorizedException("Unauthorized");
     }
+
+    if (!workspaceId) {
+      const existing = await TeamModel.findById(teamId);
+      if (!existing) {
+        throw new BadRequestException("Team not found");
+      }
+      workspaceId = existing.workspaceId.toString();
+    }
+
+    const { role } = await getMemberRoleInWorkspace(userId.toString(), workspaceId);
+    roleGuard(role, [Permissions.TEAM_DELETE]);
 
     const team = await this.teamService.deleteTeam(teamId, workspaceId);
 

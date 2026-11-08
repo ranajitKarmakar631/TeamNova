@@ -23,9 +23,7 @@ const ProtectedRoute = () => {
 
   // if user do not have any workspace then redirect to CREATE_WORKSPACE
   if (!workspaceId && location.pathname !== PROTECTED_ROUTES.CREATE_WORKSPACE) {
-    // return <Navigate to={PROTECTED_ROUTES.CREATE_WORKSPACE} replace />;
-      return <Navigate to={`/chat`} replace />;
-
+    return <Navigate to={PROTECTED_ROUTES.CREATE_WORKSPACE} replace />;
   }
 
   return <Outlet />;

@@ -9,18 +9,20 @@ export const useGetScopeMembers = ({
   scopeId,
   status,
   role,
+  search,
 }: {
   workspaceId?: string;
   scopeType: AssociationScopeType;
   scopeId?: string;
   status?: string;
   role?: AssociationRoleType;
+  search?: string;
 }) => {
   const defaultWorkspaceId = useWorkspaceId();
   const workspaceId = workspaceIdParam || defaultWorkspaceId;
 
   return useQuery({
-    queryKey: ["scope-members", scopeType, scopeId, workspaceId, status, role],
+    queryKey: ["scope-members", scopeType, scopeId, workspaceId, status, role, search],
     queryFn: () =>
       getScopeMembersQueryFn({
         workspaceId,
@@ -28,6 +30,7 @@ export const useGetScopeMembers = ({
         scopeId: scopeId!,
         status,
         role,
+        search,
       }),
     enabled: Boolean(workspaceId && scopeId),
     staleTime: 30 * 1000,

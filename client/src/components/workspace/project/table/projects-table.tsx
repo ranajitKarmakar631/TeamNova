@@ -1,9 +1,10 @@
-import { FC, useState, useMemo } from "react";
+import { FC, useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { X, Search, Backpack, UserCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import useWorkspaceId from "@/hooks/use-workspace-id";
+import useDebounce from "@/hooks/use-debounce";
 import { ProjectType } from "@/types/api.type";
 import useProjectTableFilter from "@/hooks/use-project-table-filter";
 import { getProjectColumns } from "./project-columns";
@@ -45,11 +46,13 @@ const ProjectsTable = () => {
       pageNumber,
       pageSize,
       filters.keyword,
+      viewFilter,
     ],
     queryFn: () =>
       getProjectsInWorkspaceQueryFn({
         workspaceId,
         keyword: filters.keyword || undefined,
+        onlyMyProjects: viewFilter === "MY",
         pageNumber,
         pageSize,
       }),
@@ -57,10 +60,9 @@ const ProjectsTable = () => {
     enabled: !!workspaceId,
   });
 
-  const rawProjects: ProjectType[] = data?.projects || [];
+  const projects: ProjectType[] = data?.projects || [];
   const totalCount = data?.pagination?.totalCount || 0;
 
-  // Filter projects by user associations if "MY" view selected
   const associatedProjectIds = useMemo(() => {
     return new Set(
       associations
@@ -68,13 +70,6 @@ const ProjectsTable = () => {
         .map((a) => a.scopeId)
     );
   }, [associations]);
-
-  const projects = useMemo(() => {
-    if (viewFilter === "MY") {
-      return rawProjects.filter((p) => associatedProjectIds.has(p._id));
-    }
-    return rawProjects;
-  }, [rawProjects, viewFilter, associatedProjectIds]);
 
   const handlePageChange = (page: number) => {
     setPageNumber(page);
@@ -93,7 +88,7 @@ const ProjectsTable = () => {
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
         pagination={{
-          totalCount: viewFilter === "MY" ? projects.length : totalCount,
+          totalCount,
           pageNumber,
           pageSize,
         }}
@@ -119,7 +114,23 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
   setViewFilter,
   myProjectsCount,
 }) => {
-  const hasActiveFilters = Boolean(filters.keyword && filters.keyword !== "");
+  const [searchValue, setSearchValue] = useState(filters.keyword || "");
+  const debouncedSearch = useDebounce(searchValue, 400);
+
+  useEffect(() => {
+    setSearchValue(filters.keyword || "");
+  }, [filters.keyword]);
+
+  useEffect(() => {
+    if ((debouncedSearch || null) !== (filters.keyword || null)) {
+      setFilters({
+        ...filters,
+        keyword: debouncedSearch || null,
+      });
+    }
+  }, [debouncedSearch]);
+
+  const hasActiveFilters = Boolean(searchValue && searchValue !== "");
 
   return (
     <div className="flex flex-col sm:flex-row w-full items-start sm:items-center justify-between gap-3 mb-2">
@@ -128,13 +139,8 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Filter projects by name..."
-            value={filters.keyword || ""}
-            onChange={(e) =>
-              setFilters({
-                ...filters,
-                keyword: e.target.value,
-              })
-            }
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
             className="pl-8 h-9 text-xs sm:text-sm"
           />
         </div>
@@ -142,7 +148,10 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
         {hasActiveFilters && (
           <Button
             variant="ghost"
-            onClick={() => setFilters({ ...filters, keyword: null })}
+            onClick={() => {
+              setSearchValue("");
+              setFilters({ ...filters, keyword: null });
+            }}
             className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
           >
             <X className="w-3.5 h-3.5 mr-1" />

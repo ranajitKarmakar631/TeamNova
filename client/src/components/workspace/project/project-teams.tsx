@@ -10,19 +10,31 @@ import {
   AlertCircle,
   Plus,
   Trash2,
+  Search,
+  X,
 } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import PermissionsGuard from "@/components/resuable/permission-guard";
 import { ConfirmDialog } from "@/components/resuable/confirm-dialog";
 import { Permissions } from "@/constant";
 import { toast } from "@/hooks/use-toast";
 import useWorkspaceId from "@/hooks/use-workspace-id";
+import useDebounce from "@/hooks/use-debounce";
 import { getProjectTeamsQueryFn, removeTeamFromProjectMutationFn } from "@/lib/api";
 import { ProjectTeamItemType } from "@/types/api.type";
 import TeamDetailsDrawer from "./team-details-drawer";
 import AssignTeamDialog from "./assign-team-dialog";
+import CreateTeamDialog from "../team/create-team-dialog";
 
 export const ProjectTeams = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -34,17 +46,30 @@ export const ProjectTeams = () => {
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [teamToRemove, setTeamToRemove] = useState<ProjectTeamItemType | null>(null);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["project-teams", projectId],
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 400);
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
+  const { data, isLoading, isError, isFetching } = useQuery({
+    queryKey: ["project-teams", projectId, workspaceId, debouncedSearch, statusFilter],
     queryFn: () =>
       getProjectTeamsQueryFn({
         workspaceId,
         projectId: projectId!,
+        search: debouncedSearch.trim() || undefined,
+        status: statusFilter !== "ALL" ? statusFilter : undefined,
       }),
     enabled: Boolean(workspaceId && projectId),
   });
 
   const teams = data?.teams || [];
+  const totalCount = data?.totalCount ?? teams.length;
+  const hasActiveFilters = Boolean(searchQuery.trim() || statusFilter !== "ALL");
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("ALL");
+  };
 
   const removeMutation = useMutation({
     mutationFn: removeTeamFromProjectMutationFn,
@@ -112,7 +137,7 @@ export const ProjectTeams = () => {
     );
   }
 
-  if (teams.length === 0) {
+  if (teams.length === 0 && !hasActiveFilters) {
     return (
       <div className="text-center py-16 px-4 rounded-2xl border border-dashed bg-muted/20 space-y-3">
         <Shield className="w-12 h-12 text-muted-foreground/40 mx-auto" />
@@ -121,14 +146,25 @@ export const ProjectTeams = () => {
           Assign one or more teams to this project to organize squad collaboration and track team deliverables.
         </p>
         <PermissionsGuard requiredPermission={Permissions.EDIT_PROJECT}>
-          <Button
-            size="sm"
-            onClick={() => setIsAssignDialogOpen(true)}
-            className="gap-1.5 text-xs h-9 mt-2"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Assign Team</span>
-          </Button>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <CreateTeamDialog
+              projectId={projectId!}
+              triggerButton={
+                <Button size="sm" className="gap-1.5 text-xs h-9">
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Create Team</span>
+                </Button>
+              }
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsAssignDialogOpen(true)}
+              className="gap-1.5 text-xs h-9"
+            >
+              <span>Assign Team</span>
+            </Button>
+          </div>
         </PermissionsGuard>
 
         <AssignTeamDialog
@@ -143,31 +179,96 @@ export const ProjectTeams = () => {
 
   return (
     <div className="space-y-4">
-      {/* Header bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2">
-        <div>
-          <h3 className="text-lg font-semibold tracking-tight text-foreground">
-            Project Teams ({teams.length})
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            Teams collaborating to deliver this project. Click any team to view breakdown, member roles, and task distribution.
-          </p>
+      {/* Header bar and search toolbar */}
+      <div className="space-y-3 pb-1">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-lg font-semibold tracking-tight text-foreground flex items-center gap-2">
+              <span>Project Teams ({totalCount})</span>
+              {isFetching && !isLoading && (
+                <Loader className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+              )}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Teams collaborating to deliver this project. Click any team to view breakdown, member roles, and task distribution.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetFilters}
+                className="text-xs h-9 text-muted-foreground hover:text-foreground gap-1 px-2.5"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </Button>
+            )}
+
+            <PermissionsGuard requiredPermission={Permissions.EDIT_PROJECT}>
+              <div className="flex items-center gap-2">
+                <CreateTeamDialog
+                  projectId={projectId!}
+                  triggerButton={
+                    <Button size="sm" className="gap-1.5 text-xs h-9">
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Create Team</span>
+                    </Button>
+                  }
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsAssignDialogOpen(true)}
+                  className="gap-1.5 text-xs h-9"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Assign Team</span>
+                </Button>
+              </div>
+            </PermissionsGuard>
+          </div>
         </div>
 
-        <PermissionsGuard requiredPermission={Permissions.EDIT_PROJECT}>
-          <Button
-            size="sm"
-            onClick={() => setIsAssignDialogOpen(true)}
-            className="gap-1.5 text-xs h-9 shrink-0"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Assign Team</span>
-          </Button>
-        </PermissionsGuard>
+        {/* Toolbar */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search teams by name, slug, or desc..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 text-xs h-9 bg-card"
+            />
+          </div>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px] text-xs h-9 bg-card">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Status</SelectItem>
+              <SelectItem value="ACTIVE">Active</SelectItem>
+              <SelectItem value="INACTIVE">Inactive</SelectItem>
+              <SelectItem value="ARCHIVED">Archived</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {/* Teams Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Teams Grid or Empty Search */}
+      {teams.length === 0 ? (
+        <div className="text-center py-16 px-4 rounded-2xl border border-dashed bg-muted/20 space-y-2">
+          <Shield className="w-10 h-10 text-muted-foreground/40 mx-auto" />
+          <h4 className="text-sm font-semibold text-foreground">No Teams Found</h4>
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+            No project teams matched the selected filters. Try clearing search or status filter.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {teams.map((team) => {
           const headName = team.head?.name || "Unassigned";
           const leadName = team.lead?.name || "Unassigned";
@@ -299,6 +400,7 @@ export const ProjectTeams = () => {
           );
         })}
       </div>
+      )}
 
       {/* Assign Team Dialog */}
       <AssignTeamDialog

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Loader, Plus, Shield } from "lucide-react";
+import { Check, Loader, Plus, Shield, Search } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,10 +10,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import useWorkspaceId from "@/hooks/use-workspace-id";
+import useDebounce from "@/hooks/use-debounce";
 import { assignTeamsToProjectMutationFn, getAllTeamsQueryFn } from "@/lib/api";
 
 interface AssignTeamDialogProps {
@@ -32,10 +34,17 @@ export const AssignTeamDialog = ({
   const workspaceId = useWorkspaceId();
   const queryClient = useQueryClient();
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["allteams", workspaceId],
-    queryFn: () => getAllTeamsQueryFn({ workspaceId, pageSize: 100 }),
+    queryKey: ["all-teams", workspaceId, debouncedSearch],
+    queryFn: () =>
+      getAllTeamsQueryFn({
+        workspaceId,
+        pageSize: 100,
+        keyword: debouncedSearch.trim() || undefined,
+      }),
     enabled: isOpen && Boolean(workspaceId),
   });
 
@@ -60,6 +69,9 @@ export const AssignTeamDialog = ({
       });
       queryClient.invalidateQueries({
         queryKey: ["allprojects", workspaceId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["all-teams", workspaceId],
       });
       toast({
         title: "Success",
@@ -99,6 +111,7 @@ export const AssignTeamDialog = ({
       onOpenChange={(open) => {
         if (!open) {
           setSelectedTeamIds([]);
+          setSearch("");
           onClose();
         }
       }}
@@ -113,6 +126,16 @@ export const AssignTeamDialog = ({
             Select one or more teams to collaborate on this project.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search teams..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8 h-8 text-xs"
+          />
+        </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-10">

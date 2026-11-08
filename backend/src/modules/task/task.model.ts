@@ -1,3 +1,4 @@
+// task.model.ts
 import mongoose, { Document, Schema } from "mongoose";
 import {
   TaskPriorityEnum,
@@ -13,9 +14,11 @@ export interface TaskDocument extends Document {
   description: string | null;
   project: mongoose.Types.ObjectId;
   workspace: mongoose.Types.ObjectId;
+  team: mongoose.Types.ObjectId | null;
   status: TaskStatusEnumType;
   priority: TaskPriorityEnumType;
-  assignedTo: mongoose.Types.ObjectId | null;
+  assignedTo: mongoose.Types.ObjectId[];
+  reportedTo: mongoose.Types.ObjectId | null;
   createdBy: mongoose.Types.ObjectId;
   dueDate: Date | null;
   createdAt: Date;
@@ -49,6 +52,11 @@ const taskSchema = new Schema<TaskDocument>(
       ref: "Workspace",
       required: true,
     },
+    team: {
+      type: Schema.Types.ObjectId,
+      ref: "Team",
+      default: null,
+    },
     status: {
       type: String,
       enum: Object.values(TaskStatusEnum),
@@ -59,7 +67,13 @@ const taskSchema = new Schema<TaskDocument>(
       enum: Object.values(TaskPriorityEnum),
       default: TaskPriorityEnum.MEDIUM,
     },
-    assignedTo: {
+    assignedTo: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    reportedTo: {
       type: Schema.Types.ObjectId,
       ref: "User",
       default: null,
@@ -78,6 +92,12 @@ const taskSchema = new Schema<TaskDocument>(
     timestamps: true,
   }
 );
+
+// Indexes for common queries
+taskSchema.index({ workspace: 1, project: 1, status: 1 });
+taskSchema.index({ assignedTo: 1, status: 1 });
+taskSchema.index({ reportedTo: 1 });
+taskSchema.index({ team: 1 });
 
 const TaskModel = mongoose.model<TaskDocument>("Task", taskSchema);
 
