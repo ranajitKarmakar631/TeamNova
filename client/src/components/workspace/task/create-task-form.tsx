@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
   CalendarIcon,
-  Check,
   ChevronsUpDown,
   Loader,
   ShieldAlert,
@@ -201,7 +200,7 @@ export default function CreateTaskForm(props: {
   );
 
   // 4. Teams led by current user (HEAD, LEAD, or createdBy)
-  const userLedTeams = teams.filter((t) => {
+  const userLedTeams = teams.filter((t: any) => {
     if (String(t.createdBy) === String(currentUser?._id)) return true;
     return myAssocs.some(
       (a) =>

@@ -51,7 +51,13 @@ const RecentTasks = () => {
 
       <ul role="list" className="divide-y divide-gray-200">
         {tasks.map((task) => {
-          const name = task?.assignedTo?.name || "";
+          const assignees = Array.isArray(task.assignedTo)
+            ? task.assignedTo
+            : task.assignedTo
+            ? [task.assignedTo]
+            : [];
+          const firstAssignee = assignees[0];
+          const name = firstAssignee?.name || "";
           const initials = getAvatarFallbackText(name);
           const avatarColor = getAvatarColor(name);
           return (
@@ -94,15 +100,22 @@ const RecentTasks = () => {
 
               {/* Assignee */}
               <div className="flex items-center space-x-2 ml-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage
-                    src={task.assignedTo?.profilePicture || ""}
-                    alt={task.assignedTo?.name}
-                  />
-                  <AvatarFallback className={avatarColor}>
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="flex -space-x-2">
+                  <Avatar className="h-8 w-8 border-2 border-background">
+                    <AvatarImage
+                      src={firstAssignee?.profilePicture || ""}
+                      alt={name}
+                    />
+                    <AvatarFallback className={avatarColor}>
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  {assignees.length > 1 && (
+                    <div className="h-8 w-8 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+                      +{assignees.length - 1}
+                    </div>
+                  )}
+                </div>
               </div>
             </li>
           );

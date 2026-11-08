@@ -209,9 +209,15 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
       (a.project?.name || "").localeCompare(b.project?.name || "")
     );
   } else if (groupBy === "assignee") {
-    displayedTasks.sort((a, b) =>
-      (a.assignedTo?.name || "").localeCompare(b.assignedTo?.name || "")
-    );
+    displayedTasks.sort((a, b) => {
+      const aName = Array.isArray(a.assignedTo)
+        ? a.assignedTo[0]?.name || ""
+        : a.assignedTo?.name || "";
+      const bName = Array.isArray(b.assignedTo)
+        ? b.assignedTo[0]?.name || ""
+        : b.assignedTo?.name || "";
+      return aName.localeCompare(bName);
+    });
   }
 
   // Initial loading skeleton

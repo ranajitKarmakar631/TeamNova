@@ -128,7 +128,7 @@ export default function EditTaskForm({
       (a.role === AssociationRoles.HEAD || a.role === AssociationRoles.LEAD)
   );
 
-  const userLedTeams = teams.filter((t) => {
+  const userLedTeams = teams.filter((t: any) => {
     if (String(t.createdBy) === String(currentUser?._id)) return true;
     return myAssocs.some(
       (a) =>

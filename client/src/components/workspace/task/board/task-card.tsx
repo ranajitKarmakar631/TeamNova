@@ -85,11 +85,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     ? [task.assignedTo]
     : [];
 
-  const firstAssignee = assignees[0];
-  const assigneeName = firstAssignee?.name || "Unassigned";
-  const assigneeInitials = getAvatarFallbackText(assigneeName);
-  const avatarBg = getAvatarColor(assigneeName);
-
   // Due date status
   let dueDateText: string | null = null;
   let isOverdue = false;
