@@ -11,7 +11,7 @@ export const createLinkInviteSchema = z.object({
     ])
     .default(WorkspaceRoles.EMPLOYEE),
   maxUses: z.coerce.number().int().min(1).optional().nullable(),
-  expiresInDays: z.coerce.number().int().min(1).max(90).default(7),
+  expiresInDays: z.coerce.number().int().min(1).max(3650).default(7),
 });
 
 export const createEmailInviteSchema = z.object({
@@ -24,7 +24,7 @@ export const createEmailInviteSchema = z.object({
       WorkspaceRoles.EMPLOYEE,
     ])
     .default(WorkspaceRoles.EMPLOYEE),
-  expiresInDays: z.coerce.number().int().min(1).max(90).default(7),
+  expiresInDays: z.coerce.number().int().min(1).max(3650).default(7),
 });
 
 export const acceptInviteSchema = z.object({
