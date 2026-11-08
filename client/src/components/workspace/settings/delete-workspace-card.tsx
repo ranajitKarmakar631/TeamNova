@@ -6,30 +6,23 @@ import { useAuthContext } from "@/context/auth-provider";
 import useConfirmDialog from "@/hooks/use-confirm-dialog";
 import { toast } from "@/hooks/use-toast";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { deleteWorkspaceMutationFn } from "@/lib/api";
+import { useDeleteWorkspaceMutation } from "@/features/workspace";
 import { PROTECTED_ROUTES } from "@/routes/common/routePaths";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 const DeleteWorkspaceCard = () => {
   const { workspace } = useAuthContext();
   const navigate = useNavigate();
 
-  const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
 
   const { open, onOpenDialog, onCloseDialog } = useConfirmDialog();
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: deleteWorkspaceMutationFn,
-  });
+  const { mutate, isPending } = useDeleteWorkspaceMutation();
 
   const handleConfirm = () => {
     mutate(workspaceId, {
       onSuccess: (data) => {
-        queryClient.invalidateQueries({
-          queryKey: ["userWorkspaces"],
-        });
         if (data?.currentWorkspace) {
           navigate(`/workspace/${data.currentWorkspace}`);
         } else {

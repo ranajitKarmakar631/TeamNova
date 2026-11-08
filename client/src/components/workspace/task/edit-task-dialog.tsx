@@ -1,4 +1,4 @@
-import { TaskType } from "@/types/api.type";
+import { TaskType } from "@/features/task";
 import TaskDetailSheet from "./task-detail-sheet";
 
 const EditTaskDialog = ({

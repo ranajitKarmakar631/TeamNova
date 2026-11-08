@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
+import { useProjectsQuery as useGetProjectsInWorkspaceQuery } from "@/features/project";
 import { Loader } from "lucide-react";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import { format } from "date-fns";

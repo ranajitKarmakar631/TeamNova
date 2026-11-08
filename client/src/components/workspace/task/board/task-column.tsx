@@ -1,5 +1,5 @@
 import React from "react";
-import { TaskType } from "@/types/api.type";
+import { TaskType } from "@/features/task";
 import { TaskStatusEnumType } from "@/constant";
 import { TaskCard } from "./task-card";
 import { Button } from "@/components/ui/button";

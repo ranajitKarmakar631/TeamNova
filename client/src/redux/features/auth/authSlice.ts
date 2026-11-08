@@ -1,11 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import {
-  AssociationType,
+  getCurrentUserApi as getCurrentUserQueryFn,
+  logoutApi as logoutMutationFn,
   UserType,
+} from "@/features/auth";
+import {
+  getWorkspaceByIdApi as getWorkspaceByIdQueryFn,
   WorkspaceType,
   WorkspaceWithMembersType,
-} from "@/types/api.type";
+} from "@/features/workspace";
+import {
+  getMyAssociationsApi as getMyAssociationsQueryFn,
+  AssociationType,
+} from "@/features/association";
 import {
   AssociationRolePermissions,
   AssociationRoleType,
@@ -13,12 +21,6 @@ import {
   WorkspaceRolePermissions,
   WorkspaceRoleType,
 } from "@/constant";
-import {
-  getCurrentUserQueryFn,
-  getMyAssociationsQueryFn,
-  getWorkspaceByIdQueryFn,
-  logoutMutationFn,
-} from "@/lib/api";
 
 export type PermissionScope =
   | { teamId?: string; projectId?: string }

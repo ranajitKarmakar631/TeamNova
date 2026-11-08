@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useEffect, useMemo, useCallback } from "react";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import useAuth from "@/hooks/api/use-auth";
-import { AssociationType, UserType, WorkspaceWithMembersType } from "@/types/api.type";
-import useGetWorkspaceQuery from "@/hooks/api/use-get-workspace";
+import { useAuth, UserType } from "@/features/auth";
+import { useWorkspaceQuery as useGetWorkspaceQuery, WorkspaceWithMembersType } from "@/features/workspace";
 import { useNavigate } from "react-router-dom";
 import { PermissionType } from "@/constant";
-import useGetMyAssociations from "@/hooks/api/use-get-my-associations";
+import { useGetMyAssociations, AssociationType } from "@/features/association";
 import usePermissions from "@/hooks/use-permissions";
 import { useAppDispatch } from "@/redux/store";
 import {

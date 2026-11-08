@@ -21,21 +21,17 @@ import {
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/logo";
 import GoogleOauthButton from "@/components/auth/google-oauth-button";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { loginMutationFn } from "@/lib/api";
+import { useLoginMutation } from "@/features/auth";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
 import { PROTECTED_ROUTES } from "@/routes/common/routePaths";
 
 const SignIn = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const returnUrl = searchParams.get("returnUrl");
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: loginMutationFn,
-  });
+  const { mutate, isPending } = useLoginMutation();
 
   const formSchema = z.object({
     email: z.string().trim().email("Invalid email address").min(1, {
@@ -59,9 +55,6 @@ const SignIn = () => {
 
     mutate(values, {
       onSuccess: (data) => {
-        queryClient.invalidateQueries({
-          queryKey: ["authUser"],
-        });
         const user = data.user;
         const decodedUrl = returnUrl ? decodeURIComponent(returnUrl) : null;
         const currentWorkspace = user?.currentWorkspace;

@@ -17,7 +17,7 @@ import {
   getAvatarFallbackText,
 } from "@/lib/helper";
 import { priorities, statuses } from "./data";
-import { TaskType } from "@/types/api.type";
+import { TaskType } from "@/features/task";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MessageSquare } from "lucide-react";
 

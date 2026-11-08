@@ -3,7 +3,8 @@ import {
   WorkspaceRolePermissions,
   WorkspaceRoleType,
 } from "@/constant";
-import { UserType, WorkspaceWithMembersType } from "@/types/api.type";
+import { UserType } from "@/features/auth";
+import { WorkspaceWithMembersType } from "@/features/workspace";
 import { useEffect, useMemo, useState } from "react";
 
 const usePermissions = (

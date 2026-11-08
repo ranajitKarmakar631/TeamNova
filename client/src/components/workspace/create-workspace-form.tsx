@@ -13,8 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "../ui/textarea";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createWorkspaceMutationFn } from "@/lib/api";
+import { useCreateWorkspaceMutation } from "@/features/workspace";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
@@ -26,11 +25,7 @@ export default function CreateWorkspaceForm({
 }) {
   const navigate = useNavigate();
 
-  const queryClient = useQueryClient();
-
-  const { mutate, isPending } = useMutation({
-    mutationFn: createWorkspaceMutationFn,
-  });
+  const { mutate, isPending } = useCreateWorkspaceMutation();
 
   const formSchema = z.object({
     name: z.string().trim().min(1, {
@@ -51,10 +46,6 @@ export default function CreateWorkspaceForm({
     if (isPending) return;
     mutate(values, {
       onSuccess: (data) => {
-        queryClient.resetQueries({
-          queryKey: ["userWorkspaces"],
-        });
-
         const workspace = data.workspace;
         onClose();
         navigate(`/workspace/${workspace._id}`);

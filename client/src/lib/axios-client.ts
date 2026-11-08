@@ -1,4 +1,4 @@
-import { CustomError } from "@/types/custom-error.type";
+import { CustomError } from "./api-error";
 import axios from "axios";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL;

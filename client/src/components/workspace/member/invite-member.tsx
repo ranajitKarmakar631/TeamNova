@@ -28,17 +28,15 @@ import {
 import { BASE_ROUTE } from "@/routes/common/routePaths";
 import PermissionsGuard from "@/components/resuable/permission-guard";
 import { Permissions, WorkspaceRoles } from "@/constant";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  createEmailInviteMutationFn,
-  createLinkInviteMutationFn,
-  getWorkspaceInvitationsQueryFn,
-  revokeInvitationMutationFn,
-} from "@/lib/api";
+  useCreateEmailInviteMutation,
+  useCreateLinkInviteMutation,
+  useRevokeInvitationMutation,
+  useWorkspaceInvitationsQuery,
+} from "@/features/workspace";
 
 const InviteMember = () => {
   const { workspace, workspaceLoading } = useAuthContext();
-  const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState("email");
 
@@ -68,53 +66,42 @@ const InviteMember = () => {
   const {
     data: invitationsData,
     isLoading: isInvitationsLoading,
-  } = useQuery({
-    queryKey: ["workspaceInvitations", workspace?._id],
-    queryFn: () => getWorkspaceInvitationsQueryFn(workspace?._id!),
-    enabled: !!workspace?._id,
-  });
+  } = useWorkspaceInvitationsQuery(workspace?._id || "");
 
   const invitations = invitationsData?.invitations || [];
 
   // Email invite mutation
-  const { mutate: sendEmailInvite, isPending: isSendingEmail } = useMutation({
-    mutationFn: createEmailInviteMutationFn,
-    onSuccess: (data) => {
-      toast({
-        title: "Invitation sent!",
-        description: data.message || `Invitation email sent to ${email}`,
-        variant: "success",
-      });
-      setEmail("");
-      queryClient.invalidateQueries({
-        queryKey: ["workspaceInvitations", workspace?._id],
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to send invitation",
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Could not send email invitation",
-        variant: "destructive",
-      });
-    },
-  });
+  const { mutate: sendEmailInvite, isPending: isSendingEmail } =
+    useCreateEmailInviteMutation({
+      onSuccess: (data) => {
+        toast({
+          title: "Invitation sent!",
+          description: data.message || `Invitation email sent to ${email}`,
+          variant: "success",
+        });
+        setEmail("");
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Failed to send invitation",
+          description:
+            error?.response?.data?.message ||
+            error?.message ||
+            "Could not send email invitation",
+          variant: "destructive",
+        });
+      },
+    });
 
   // Link invite mutation
-  const { mutate: generateLinkInvite, isPending: isGeneratingLink } = useMutation(
-    {
-      mutationFn: createLinkInviteMutationFn,
+  const { mutate: generateLinkInvite, isPending: isGeneratingLink } =
+    useCreateLinkInviteMutation({
       onSuccess: (data) => {
         setGeneratedLink(data.inviteUrl);
         toast({
           title: "Invite link created!",
           description: "Your custom shareable invitation link is ready",
           variant: "success",
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["workspaceInvitations", workspace?._id],
         });
       },
       onError: (error: any) => {
@@ -127,33 +114,29 @@ const InviteMember = () => {
           variant: "destructive",
         });
       },
-    }
-  );
+    });
 
   // Revoke invitation mutation
-  const { mutate: revokeInvite, isPending: isRevoking } = useMutation({
-    mutationFn: revokeInvitationMutationFn,
-    onSuccess: () => {
-      toast({
-        title: "Invitation revoked",
-        description: "The invitation has been successfully revoked",
-        variant: "success",
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["workspaceInvitations", workspace?._id],
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to revoke invitation",
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Could not revoke invitation",
-        variant: "destructive",
-      });
-    },
-  });
+  const { mutate: revokeInvite, isPending: isRevoking } =
+    useRevokeInvitationMutation({
+      onSuccess: () => {
+        toast({
+          title: "Invitation revoked",
+          description: "The invitation has been successfully revoked",
+          variant: "success",
+        });
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Failed to revoke invitation",
+          description:
+            error?.response?.data?.message ||
+            error?.message ||
+            "Could not revoke invitation",
+          variant: "destructive",
+        });
+      },
+    });
 
   const handleSendEmail = (e: React.FormEvent) => {
     e.preventDefault();

@@ -42,18 +42,20 @@ import {
 import { ConfirmDialog } from "@/components/resuable/confirm-dialog";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { useAuthContext } from "@/context/auth-provider";
-import useGetScopeMembers from "@/hooks/api/use-get-scope-members";
-import useGetAvailableScopeMembers from "@/hooks/api/use-get-available-scope-members";
-import useScopeMemberMutations from "@/hooks/api/use-scope-member-mutations";
+import {
+  useScopeMembersQuery as useGetScopeMembers,
+  useAvailableScopeMembersQuery as useGetAvailableScopeMembers,
+  useScopeMemberMutations,
+  AssociationScopeType,
+  ScopeMemberType,
+} from "@/features/association";
 import {
   AssociationRoles,
   AssociationRoleType,
-  AssociationScopeType,
-  ScopeMemberType,
-} from "@/types/api.type";
+  WorkspaceRoles,
+} from "@/constant";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import { format } from "date-fns";
-import { WorkspaceRoles } from "@/constant";
 
 interface ScopeMembersListProps {
   scopeType: AssociationScopeType;

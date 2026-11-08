@@ -21,9 +21,12 @@ import {
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import { useAuthContext } from "@/context/auth-provider";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { changeWorkspaceMemberRoleMutationFn, deleteWorkspaceMemberMutationFn } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useChangeMemberRoleMutation,
+  useDeleteWorkspaceMemberMutation,
+  useWorkspaceMembersQuery,
+} from "@/features/member";
 import { toast } from "@/hooks/use-toast";
 import { Permissions, WorkspaceRoles } from "@/constant";
 
@@ -55,37 +58,31 @@ const AllMembers = () => {
   const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null);
   const [memberToDelete, setMemberToDelete] = useState<{ id: string; name: string } | null>(null);
 
-  const { data, isPending } = useGetWorkspaceMembers(workspaceId);
+  const { data, isPending } = useWorkspaceMembersQuery(workspaceId);
   const members = data?.members || [];
   const roles = data?.roles || [];
 
-  const { mutate: deleteMemberMutate, isPending: isDeletingMember } = useMutation({
-    mutationFn: deleteWorkspaceMemberMutationFn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["members", workspaceId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["userWorkspaces"],
-      });
-      toast({
-        title: "Success",
-        description: "Member removed from workspace successfully",
-        variant: "success",
-      });
-      setMemberToDelete(null);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description:
-          error?.response?.data?.message ||
-          error.message ||
-          "Failed to remove member",
-        variant: "destructive",
-      });
-    },
-  });
+  const { mutate: deleteMemberMutate, isPending: isDeletingMember } =
+    useDeleteWorkspaceMemberMutation({
+      onSuccess: () => {
+        toast({
+          title: "Success",
+          description: "Member removed from workspace successfully",
+          variant: "success",
+        });
+        setMemberToDelete(null);
+      },
+      onError: (error: any) => {
+        toast({
+          title: "Error",
+          description:
+            error?.response?.data?.message ||
+            error.message ||
+            "Failed to remove member",
+          variant: "destructive",
+        });
+      },
+    });
 
   const handleConfirmRemove = () => {
     if (!memberToDelete) return;
@@ -115,9 +112,7 @@ const AllMembers = () => {
       return orderA - orderB;
     });
 
-  const { mutate } = useMutation({
-    mutationFn: changeWorkspaceMemberRoleMutationFn,
-  });
+  const { mutate } = useChangeMemberRoleMutation();
 
   const handleSelect = (roleId: string, memberUserId: string) => {
     if (!roleId || !memberUserId) return;

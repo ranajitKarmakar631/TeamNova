@@ -1,14 +1,13 @@
 import React, { useState } from "react";
 import { useParams } from "react-router-dom";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import useAuth from "@/hooks/api/use-auth";
+import { useAuth } from "@/features/auth";
 import { useAuthContext } from "@/context/auth-provider";
 import { Permissions, TaskPriorityEnumType, TaskStatusEnumType } from "@/constant";
 import useTaskTableFilter from "@/hooks/use-task-table-filter";
-import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
-import { getAllTasksQueryFn, getAllTeamsQueryFn } from "@/lib/api";
-import { TaskType } from "@/types/api.type";
+import { useProjectsQuery } from "@/features/project";
+import { useTeamsQuery } from "@/features/team";
+import { useTasksQuery, TaskType } from "@/features/task";
 import { TaskBoardHeader } from "./board/task-board-header";
 import { TaskBoardFilterToolbar } from "./board/task-board-filter-toolbar";
 import { TaskBoard } from "./board/task-board";
@@ -58,17 +57,15 @@ export const TaskView: React.FC<TaskViewProps> = ({ projectId: propProjectId }) 
   };
 
   // Projects in workspace
-  const { data: projectsData } = useGetProjectsInWorkspaceQuery({
+  const { data: projectsData } = useProjectsQuery({
     workspaceId,
   });
   const projects = projectsData?.projects || [];
 
   // Teams in workspace
-  const { data: teamsData } = useQuery({
-    queryKey: ["all-teams", workspaceId],
-    queryFn: () => getAllTeamsQueryFn({ workspaceId, pageSize: 50 }),
-    staleTime: 5 * 60 * 1000,
-    enabled: !!workspaceId,
+  const { data: teamsData } = useTeamsQuery({
+    workspaceId,
+    pageSize: 50,
   });
   const teams = teamsData?.teams || [];
 
@@ -79,31 +76,20 @@ export const TaskView: React.FC<TaskViewProps> = ({ projectId: propProjectId }) 
       : (filters.assigneeId || currentUserId || null);
 
   // Query tasks with keepPreviousData to completely eliminate "jhatka" (layout shifts / blank flickers)
-  const { data, isLoading, isFetching } = useQuery({
-    queryKey: [
-      "all-tasks",
+  const { data, isLoading, isFetching } = useTasksQuery(
+    {
       workspaceId,
-      pageSize,
+      keyword: filters.keyword,
+      priority: (filters.priority as TaskPriorityEnumType) || null,
+      status: (filters.status as TaskStatusEnumType) || null,
+      projectId: projectId || filters.projectId,
+      assignedTo: effectiveAssigneeId,
+      teamId: filters.teamId,
       pageNumber,
-      filters,
-      effectiveAssigneeId,
-      projectId,
-    ],
-    queryFn: () =>
-      getAllTasksQueryFn({
-        workspaceId,
-        keyword: filters.keyword,
-        priority: (filters.priority as TaskPriorityEnumType) || null,
-        status: (filters.status as TaskStatusEnumType) || null,
-        projectId: projectId || filters.projectId,
-        assignedTo: effectiveAssigneeId,
-        teamId: filters.teamId,
-        pageNumber,
-        pageSize,
-      }),
-    staleTime: 0,
-    placeholderData: keepPreviousData, // <--- Crucial: retains previous data during refetches
-  });
+      pageSize,
+    },
+    { staleTime: 0 }
+  );
 
   const isRefetching = isFetching && !isLoading;
   const tasks: TaskType[] = data?.tasks || [];

@@ -1,8 +1,7 @@
 import { useParams } from "react-router-dom";
 import AnalyticsCard from "../common/analytics-card";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { useQuery } from "@tanstack/react-query";
-import { getProjectAnalyticsQueryFn } from "@/lib/api";
+import { useProjectAnalyticsQuery } from "@/features/project";
 
 const ProjectAnalytics = () => {
   const param = useParams();
@@ -10,12 +9,10 @@ const ProjectAnalytics = () => {
 
   const workspaceId = useWorkspaceId();
 
-  const { data, isPending } = useQuery({
-    queryKey: ["project-analytics", projectId],
-    queryFn: () => getProjectAnalyticsQueryFn({ workspaceId, projectId }),
-    staleTime: 0,
-    enabled: !!projectId,
-  });
+  const { data, isPending } = useProjectAnalyticsQuery(
+    { workspaceId, projectId },
+    { staleTime: 0 }
+  );
 
   const analytics = data?.analytics;
 

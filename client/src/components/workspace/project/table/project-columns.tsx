@@ -7,7 +7,9 @@ import { DataTableColumnHeader } from "../../task/table/table-column-header";
 import { ProjectTableRowActions } from "./project-row-actions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { ProjectType, AssociationType, AssociationRoles } from "@/types/api.type";
+import { ProjectType } from "@/features/project";
+import { AssociationType } from "@/features/association";
+import { AssociationRoles } from "@/constant";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 

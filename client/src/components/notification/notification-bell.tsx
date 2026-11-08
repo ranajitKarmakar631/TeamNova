@@ -23,7 +23,7 @@ import {
   useGetUnreadNotificationCountQuery,
   useMarkAllNotificationsAsReadMutation,
   useMarkNotificationAsReadMutation,
-} from "@/hooks/api/use-notifications";
+} from "@/features/notification";
 import { useSocketContext } from "@/context/socket-provider";
 import { NotificationItem } from "./notification-item";
 import useWorkspaceId from "@/hooks/use-workspace-id";

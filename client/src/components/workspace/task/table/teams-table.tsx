@@ -2,16 +2,14 @@ import { FC, useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { X, Search, Shield, UserCheck } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useDebounce from "@/hooks/use-debounce";
-import { TeamType } from "@/types/api.type";
 import useTeamTableFilter from "@/hooks/use-teams-table-filter";
 import { getTeamColumns } from "./team-columns";
 import { DataTable } from "./table";
 import { DataTableFacetedFilter } from "./table-faceted-filter";
 import { teamStatuses } from "./team-data";
-import { getAllTeamsQueryFn } from "@/lib/api";
+import { useTeamsQuery, TeamType } from "@/features/team";
 import { useAuthContext } from "@/context/auth-provider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -41,28 +39,17 @@ const TeamsTable = () => {
     [workspaceId, associations]
   );
 
-  const { data, isLoading } = useQuery({
-    queryKey: [
-      "all-teams",
+  const { data, isLoading } = useTeamsQuery(
+    {
       workspaceId,
-      pageSize,
+      keyword: filters.keyword,
+      status: filters.status,
+      onlyMyTeams: viewFilter === "MY",
       pageNumber,
-      filters.keyword,
-      filters.status,
-      viewFilter,
-    ],
-    queryFn: () =>
-      getAllTeamsQueryFn({
-        workspaceId,
-        keyword: filters.keyword,
-        status: filters.status,
-        onlyMyTeams: viewFilter === "MY",
-        pageNumber,
-        pageSize,
-      }),
-    staleTime: 0,
-    enabled: !!workspaceId,
-  });
+      pageSize,
+    },
+    { staleTime: 0 }
+  );
 
   const teams: TeamType[] = data?.teams || [];
   const totalCount = data?.pagination?.totalCount || 0;

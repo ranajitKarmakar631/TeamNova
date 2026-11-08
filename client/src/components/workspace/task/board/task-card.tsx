@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TaskType } from "@/types/api.type";
+import { TaskType } from "@/features/task";
 import { TaskPriorityEnum } from "@/constant";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";

@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Socket } from "socket.io-client";
 import { connectSocket, disconnectSocket } from "@/lib/socket";
-import useAuth from "@/hooks/api/use-auth";
+import { useAuth } from "@/features/auth";
 import { useQueryClient } from "@tanstack/react-query";
-import { NOTIFICATION_QUERY_KEYS } from "@/hooks/api/use-notifications";
+import { NOTIFICATION_QUERY_KEYS } from "@/features/notification";
 import { toast } from "@/hooks/use-toast";
-import { NotificationItemType } from "@/types/notification.type";
+import { NotificationItemType } from "@/features/notification";
 
 interface SocketContextType {
   socket: Socket | null;

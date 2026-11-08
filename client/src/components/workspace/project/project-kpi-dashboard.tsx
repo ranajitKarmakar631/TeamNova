@@ -1,5 +1,4 @@
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import {
   CheckCircle2,
   Clock,
@@ -16,45 +15,32 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import {
-  getProjectMembersQueryFn,
-  getProjectOverviewQueryFn,
-  getProjectTeamsQueryFn,
-} from "@/lib/api";
+  useProjectMembersQuery,
+  useProjectOverviewQuery,
+  useProjectTeamsQuery,
+} from "@/features/project";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 
 export const ProjectKpiDashboard = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const workspaceId = useWorkspaceId();
 
-  const { data: overviewData, isLoading: isLoadingOverview } = useQuery({
-    queryKey: ["project-overview", projectId],
-    queryFn: () =>
-      getProjectOverviewQueryFn({
-        workspaceId,
-        projectId: projectId!,
-      }),
-    enabled: Boolean(workspaceId && projectId),
+  const { data: overviewData, isLoading: isLoadingOverview } =
+    useProjectOverviewQuery({
+      workspaceId,
+      projectId: projectId!,
+    });
+
+  const { data: teamsData, isLoading: isLoadingTeams } = useProjectTeamsQuery({
+    workspaceId,
+    projectId: projectId!,
   });
 
-  const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
-    queryKey: ["project-teams", projectId],
-    queryFn: () =>
-      getProjectTeamsQueryFn({
-        workspaceId,
-        projectId: projectId!,
-      }),
-    enabled: Boolean(workspaceId && projectId),
-  });
-
-  const { data: membersData, isLoading: isLoadingMembers } = useQuery({
-    queryKey: ["project-members", projectId],
-    queryFn: () =>
-      getProjectMembersQueryFn({
-        workspaceId,
-        projectId: projectId!,
-      }),
-    enabled: Boolean(workspaceId && projectId),
-  });
+  const { data: membersData, isLoading: isLoadingMembers } =
+    useProjectMembersQuery({
+      workspaceId,
+      projectId: projectId!,
+    });
 
   const isLoading = isLoadingOverview || isLoadingTeams || isLoadingMembers;
 

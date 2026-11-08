@@ -22,11 +22,10 @@ import { useAuthContext } from "@/context/auth-provider";
 import { toast } from "@/hooks/use-toast";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import {
-  deleteProjectMutationFn,
-  getProjectOverviewQueryFn,
-} from "@/lib/api";
+  useDeleteProjectMutation,
+  useProjectOverviewQuery,
+} from "@/features/project";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import CreateTaskDialog from "../task/create-task-dialog";
 import EditProjectDialog from "./edit-project-dialog";
@@ -35,29 +34,19 @@ export const ProjectHeader = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const workspaceId = useWorkspaceId();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { hasPermission } = useAuthContext();
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const canDeleteProject = hasPermission(Permissions.DELETE_PROJECT);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["project-overview", projectId],
-    queryFn: () =>
-      getProjectOverviewQueryFn({
-        workspaceId,
-        projectId: projectId!,
-      }),
-    enabled: Boolean(workspaceId && projectId),
+  const { data, isLoading, isError } = useProjectOverviewQuery({
+    workspaceId,
+    projectId: projectId!,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteProjectMutationFn,
+  const deleteMutation = useDeleteProjectMutation({
     onSuccess: (res) => {
-      queryClient.invalidateQueries({
-        queryKey: ["allprojects", workspaceId],
-      });
       toast({
         title: "Success",
         description: res.message || "Project deleted successfully",

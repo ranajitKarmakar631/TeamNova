@@ -50,18 +50,18 @@ import {
   TaskStatusEnum,
   WorkspaceRoles,
 } from "@/constant";
-import useAuth from "@/hooks/api/use-auth";
-import useGetWorkspaceQuery from "@/hooks/api/use-get-workspace";
-import useGetMyAssociations from "@/hooks/api/use-get-my-associations";
+import { useAuth } from "@/features/auth";
+import { useGetMyAssociations } from "@/features/association";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useQueryClient } from "@tanstack/react-query";
+import { useUpdateTaskMutation, TaskType } from "@/features/task";
 import {
-  editTaskMutationFn,
-  getProjectMembersQueryFn,
-  getProjectTeamsQueryFn,
-} from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+  useProjectMembersQuery,
+  useProjectTeamsQuery,
+} from "@/features/project";
+import { useWorkspaceQuery } from "@/features/workspace";
 import { toast } from "@/hooks/use-toast";
-import { TaskType } from "@/types/api.type";
+
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TaskComments } from "./comments";
@@ -82,28 +82,24 @@ export default function EditTaskForm({
   const projectId = task.project?._id ?? "";
   const [assigneeSearch, setAssigneeSearch] = useState("");
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: editTaskMutationFn,
-  });
+  const { mutate, isPending } = useUpdateTaskMutation();
 
   // Fetch corresponding Teams of this task's project
-  const { data: projectTeamsData, isLoading: isLoadingTeams } = useQuery({
-    queryKey: ["project-teams", workspaceId, projectId],
-    queryFn: () => getProjectTeamsQueryFn({ workspaceId, projectId }),
-    enabled: Boolean(workspaceId && projectId),
-  });
+  const { data: projectTeamsData, isLoading: isLoadingTeams } = useProjectTeamsQuery(
+    { workspaceId, projectId },
+    { enabled: Boolean(workspaceId && projectId) }
+  );
   const teams = projectTeamsData?.teams || [];
 
   // Fetch corresponding Members of this task's project
-  const { data: projectMembersData, isLoading: isLoadingMembers } = useQuery({
-    queryKey: ["project-members", workspaceId, projectId],
-    queryFn: () => getProjectMembersQueryFn({ workspaceId, projectId }),
-    enabled: Boolean(workspaceId && projectId),
-  });
+  const { data: projectMembersData, isLoading: isLoadingMembers } = useProjectMembersQuery(
+    { workspaceId, projectId },
+    { enabled: Boolean(workspaceId && projectId) }
+  );
   const projectMembers = projectMembersData?.members || [];
 
   // Role & permission checks
-  const { data: workspaceData } = useGetWorkspaceQuery(workspaceId);
+  const { data: workspaceData } = useWorkspaceQuery(workspaceId);
   const { data: myAssociationsData } = useGetMyAssociations(workspaceId);
 
   // 1. Workspace role

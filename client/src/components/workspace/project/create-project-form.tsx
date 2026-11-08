@@ -28,8 +28,8 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createProjectMutationFn, getAllTeamsQueryFn } from "@/lib/api";
+import { useCreateProjectMutation } from "@/features/project";
+import { useTeamsQuery } from "@/features/team";
 import { toast } from "@/hooks/use-toast";
 import { Loader, Plus, Users, X } from "lucide-react";
 
@@ -39,7 +39,6 @@ export default function CreateProjectForm({
   onClose: () => void;
 }) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
 
   const [emoji, setEmoji] = useState("📊");
@@ -47,17 +46,13 @@ export default function CreateProjectForm({
   const [newTeamName, setNewTeamName] = useState("");
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
 
-  const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
-    queryKey: ["all-teams", workspaceId],
-    queryFn: () => getAllTeamsQueryFn({ workspaceId }),
-    staleTime: 1000 * 60 * 2,
+  const { data: teamsData, isLoading: isLoadingTeams } = useTeamsQuery({
+    workspaceId,
   });
 
   const teams = teamsData?.teams || [];
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: createProjectMutationFn,
-  });
+  const { mutate, isPending } = useCreateProjectMutation();
 
   const formSchema = z.object({
     name: z.string().trim().min(1, {
@@ -111,12 +106,6 @@ export default function CreateProjectForm({
     mutate(payload, {
       onSuccess: (data) => {
         const project = data.project;
-        queryClient.invalidateQueries({
-          queryKey: ["allprojects", workspaceId],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["all-teams", workspaceId],
-        });
 
         toast({
           title: "Success",

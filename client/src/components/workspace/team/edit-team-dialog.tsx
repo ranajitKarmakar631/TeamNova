@@ -25,11 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { editTeamMutationFn } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { useUpdateTeamMutation, TeamType } from "@/features/team";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
-import { TeamType } from "@/types/api.type";
+
 import useWorkspaceId from "@/hooks/use-workspace-id";
 
 const formSchema = z.object({
@@ -50,9 +50,7 @@ export const EditTeamDialog = ({
   const workspaceId = useWorkspaceId();
   const queryClient = useQueryClient();
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: editTeamMutationFn,
-  });
+  const { mutate, isPending } = useUpdateTeamMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

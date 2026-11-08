@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Shield,
   Crown,
@@ -30,8 +30,11 @@ import { Permissions } from "@/constant";
 import { toast } from "@/hooks/use-toast";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useDebounce from "@/hooks/use-debounce";
-import { getProjectTeamsQueryFn, removeTeamFromProjectMutationFn } from "@/lib/api";
-import { ProjectTeamItemType } from "@/types/api.type";
+import {
+  useProjectTeamsQuery,
+  useRemoveTeamFromProjectMutation,
+  ProjectTeamItemType,
+} from "@/features/project";
 import TeamDetailsDrawer from "./team-details-drawer";
 import AssignTeamDialog from "./assign-team-dialog";
 import CreateTeamDialog from "../team/create-team-dialog";
@@ -50,16 +53,11 @@ export const ProjectTeams = () => {
   const debouncedSearch = useDebounce(searchQuery, 400);
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  const { data, isLoading, isError, isFetching } = useQuery({
-    queryKey: ["project-teams", projectId, workspaceId, debouncedSearch, statusFilter],
-    queryFn: () =>
-      getProjectTeamsQueryFn({
-        workspaceId,
-        projectId: projectId!,
-        search: debouncedSearch.trim() || undefined,
-        status: statusFilter !== "ALL" ? statusFilter : undefined,
-      }),
-    enabled: Boolean(workspaceId && projectId),
+  const { data, isLoading, isError, isFetching } = useProjectTeamsQuery({
+    workspaceId,
+    projectId: projectId!,
+    search: debouncedSearch.trim() || undefined,
+    status: statusFilter !== "ALL" ? statusFilter : undefined,
   });
 
   const teams = data?.teams || [];
@@ -71,23 +69,10 @@ export const ProjectTeams = () => {
     setStatusFilter("ALL");
   };
 
-  const removeMutation = useMutation({
-    mutationFn: removeTeamFromProjectMutationFn,
+  const removeMutation = useRemoveTeamFromProjectMutation({
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["project-teams", projectId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["project-overview", projectId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["project-members", projectId],
-      });
-      queryClient.invalidateQueries({
         queryKey: ["available-scope-members"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["allprojects", workspaceId],
       });
       toast({
         title: "Success",

@@ -2,8 +2,8 @@ import { Link } from "react-router-dom";
 import { Loader, Shield, Backpack, Crown, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import useGetMyAssociations from "@/hooks/api/use-get-my-associations";
-import { AssociationRoles, AssociationRoleType } from "@/types/api.type";
+import { useMyAssociationsQuery as useGetMyAssociations } from "@/features/association";
+import { AssociationRoles, AssociationRoleType } from "@/constant";
 
 const ROLE_BADGE: Record<
   AssociationRoleType,

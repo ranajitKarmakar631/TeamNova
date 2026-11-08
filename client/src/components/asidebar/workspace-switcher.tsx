@@ -20,8 +20,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useCreateWorkspaceDialog from "@/hooks/use-create-workspace-dialog";
-import { useQuery } from "@tanstack/react-query";
-import { getAllWorkspacesUserIsMemberQueryFn } from "@/lib/api";
+import { useAllWorkspacesQuery } from "@/features/workspace";
 
 type WorkspaceType = {
   _id: string;
@@ -37,10 +36,7 @@ export function WorkspaceSwitcher() {
 
   const [activeWorkspace, setActiveWorkspace] = React.useState<WorkspaceType>();
 
-  const { data, isPending } = useQuery({
-    queryKey: ["userWorkspaces"],
-    queryFn: getAllWorkspacesUserIsMemberQueryFn,
-    staleTime: 10 * 1000,
+  const { data, isPending } = useAllWorkspacesQuery({
     refetchOnMount: true,
   });
 

@@ -12,10 +12,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/resuable/confirm-dialog";
-import { TeamType } from "@/types/api.type";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { deleteTeamMutationFn } from "@/lib/api";
+import { useDeleteTeamMutation, TeamType } from "@/features/team";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/context/auth-provider";
 import { Permissions } from "@/constant";
@@ -35,8 +34,10 @@ export function TeamTableRowActions({ row }: TeamTableRowActionsProps) {
   const teamId = team._id;
   const canDeleteTeam = hasPermission(Permissions.TEAM_DELETE);
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: deleteTeamMutationFn,
+  const { mutate, isPending } = useDeleteTeamMutation({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-associations", workspaceId] });
+    },
   });
 
   const handleCopyLink = () => {

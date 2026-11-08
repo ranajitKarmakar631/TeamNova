@@ -16,7 +16,9 @@ import {
 } from "@/redux/features/auth/authSlice";
 import { PermissionType } from "@/constant";
 import useWorkspaceId from "./use-workspace-id";
-import { AssociationType, UserType, WorkspaceWithMembersType } from "@/types/api.type";
+import { UserType } from "@/features/auth";
+import { WorkspaceWithMembersType } from "@/features/workspace";
+import { AssociationType } from "@/features/association";
 
 export const useAuthRedux = () => {
   const dispatch = useAppDispatch();

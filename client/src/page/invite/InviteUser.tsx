@@ -10,17 +10,15 @@ import {
 import Logo from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { BASE_ROUTE } from "@/routes/common/routePaths";
-import useAuth from "@/hooks/api/use-auth";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/features/auth";
 import {
-  getInviteDetailsQueryFn,
-  invitedUserJoinWorkspaceMutationFn,
-} from "@/lib/api";
+  useInviteDetailsQuery,
+  useJoinWorkspaceMutation,
+} from "@/features/workspace";
 import { toast } from "@/hooks/use-toast";
 
 const InviteUser = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   const param = useParams();
   const inviteCode = param.inviteCode as string;
@@ -28,17 +26,9 @@ const InviteUser = () => {
   const { data: authData, isPending: isAuthPending } = useAuth();
   const user = authData?.user;
 
-  const { data: inviteDetails } =
-    useQuery({
-      queryKey: ["inviteDetails", inviteCode],
-      queryFn: () => getInviteDetailsQueryFn(inviteCode),
-      enabled: !!inviteCode,
-      retry: false,
-    });
+  const { data: inviteDetails } = useInviteDetailsQuery(inviteCode);
 
-  const { mutate, isPending: isLoading } = useMutation({
-    mutationFn: invitedUserJoinWorkspaceMutationFn,
-  });
+  const { mutate, isPending: isLoading } = useJoinWorkspaceMutation();
 
   const returnUrl = encodeURIComponent(
     `${BASE_ROUTE.INVITE_URL.replace(":inviteCode", inviteCode)}`
@@ -48,12 +38,6 @@ const InviteUser = () => {
     e.preventDefault();
     mutate(inviteCode, {
       onSuccess: (data) => {
-        queryClient.resetQueries({
-          queryKey: ["userWorkspaces"],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["authUser"],
-        });
         navigate(`/workspace/${data.workspaceId}`);
       },
       onError: (error) => {

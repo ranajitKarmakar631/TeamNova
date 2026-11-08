@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Shield,
   ArrowLeft,
@@ -17,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ConfirmDialog } from "@/components/resuable/confirm-dialog";
 import { toast } from "@/hooks/use-toast";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { getTeamByIdQueryFn, deleteTeamMutationFn } from "@/lib/api";
+import { useDeleteTeamMutation, useTeamQuery } from "@/features/team";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import { format } from "date-fns";
 import { useAuthContext } from "@/context/auth-provider";
@@ -29,7 +28,6 @@ export const TeamDetails = () => {
   const { teamId } = useParams<{ teamId: string }>();
   const workspaceId = useWorkspaceId();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { hasPermission } = useAuthContext();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -38,18 +36,13 @@ export const TeamDetails = () => {
   const canEditTeam = hasPermission(Permissions.TEAM_UPDATE);
   const canDeleteTeam = hasPermission(Permissions.TEAM_DELETE);
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["team-detail", teamId],
-    queryFn: () => getTeamByIdQueryFn({ workspaceId, teamId: teamId! }),
-    enabled: Boolean(workspaceId && teamId),
+  const { data, isLoading, isError } = useTeamQuery({
+    workspaceId,
+    teamId: teamId!,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteTeamMutationFn,
+  const deleteMutation = useDeleteTeamMutation({
     onSuccess: (res) => {
-      queryClient.invalidateQueries({
-        queryKey: ["all-teams", workspaceId],
-      });
       toast({
         title: "Success",
         description: res.message || "Team deleted successfully",

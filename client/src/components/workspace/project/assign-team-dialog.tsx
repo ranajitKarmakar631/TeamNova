@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Check, Loader, Plus, Shield, Search } from "lucide-react";
 import {
   Dialog,
@@ -16,7 +16,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useDebounce from "@/hooks/use-debounce";
-import { assignTeamsToProjectMutationFn, getAllTeamsQueryFn } from "@/lib/api";
+import { useAssignTeamsToProjectMutation } from "@/features/project";
+import { useTeamsQuery } from "@/features/team";
 
 interface AssignTeamDialogProps {
   isOpen: boolean;
@@ -37,38 +38,23 @@ export const AssignTeamDialog = ({
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["all-teams", workspaceId, debouncedSearch],
-    queryFn: () =>
-      getAllTeamsQueryFn({
-        workspaceId,
-        pageSize: 100,
-        keyword: debouncedSearch.trim() || undefined,
-      }),
-    enabled: isOpen && Boolean(workspaceId),
-  });
+  const { data, isLoading } = useTeamsQuery(
+    {
+      workspaceId,
+      pageSize: 100,
+      keyword: debouncedSearch.trim() || undefined,
+    },
+    { enabled: isOpen && Boolean(workspaceId) }
+  );
 
   const allTeams = data?.teams || [];
   // Filter out teams that are already assigned to this project
   const availableTeams = allTeams.filter((t) => !currentTeamIds.includes(t._id));
 
-  const assignMutation = useMutation({
-    mutationFn: assignTeamsToProjectMutationFn,
+  const assignMutation = useAssignTeamsToProjectMutation({
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["project-teams", projectId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["project-overview", projectId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["project-members", projectId],
-      });
-      queryClient.invalidateQueries({
         queryKey: ["available-scope-members"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["allprojects", workspaceId],
       });
       queryClient.invalidateQueries({
         queryKey: ["all-teams", workspaceId],

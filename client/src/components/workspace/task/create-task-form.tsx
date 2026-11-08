@@ -51,17 +51,17 @@ import {
   TaskStatusEnumType,
   WorkspaceRoles,
 } from "@/constant";
-import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
-import useAuth from "@/hooks/api/use-auth";
-import useGetWorkspaceQuery from "@/hooks/api/use-get-workspace";
-import useGetMyAssociations from "@/hooks/api/use-get-my-associations";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/features/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useCreateTaskMutation } from "@/features/task";
 import {
-  createTaskMutationFn,
-  getProjectMembersQueryFn,
-  getProjectTeamsQueryFn,
-} from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+  useProjectMembersQuery,
+  useProjectTeamsQuery,
+  useProjectsQuery,
+} from "@/features/project";
+import { useWorkspaceQuery } from "@/features/workspace";
+import { useGetMyAssociations } from "@/features/association";
 import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -80,16 +80,13 @@ export default function CreateTaskForm(props: {
   const { data: authData } = useAuth();
   const currentUser = authData?.user;
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: createTaskMutationFn,
-  });
+  const { mutate, isPending } = useCreateTaskMutation();
 
   // Projects list in workspace
-  const { data: projectsData, isLoading: isLoadingProjects } =
-    useGetProjectsInWorkspaceQuery({
-      workspaceId,
-      skip: !!projectId,
-    });
+  const { data: projectsData, isLoading: isLoadingProjects } = useProjectsQuery({
+    workspaceId,
+    skip: !!projectId,
+  });
   const projects = projectsData?.projects || [];
 
   const formSchema = z.object({
@@ -144,25 +141,21 @@ export default function CreateTaskForm(props: {
   const selectedProjectId = projectId || form.watch("projectId");
 
   // Fetch corresponding Teams of the selected project
-  const { data: projectTeamsData, isLoading: isLoadingTeams } = useQuery({
-    queryKey: ["project-teams", workspaceId, selectedProjectId],
-    queryFn: () =>
-      getProjectTeamsQueryFn({ workspaceId, projectId: selectedProjectId }),
-    enabled: Boolean(workspaceId && selectedProjectId),
-  });
+  const { data: projectTeamsData, isLoading: isLoadingTeams } = useProjectTeamsQuery(
+    { workspaceId, projectId: selectedProjectId },
+    { enabled: Boolean(workspaceId && selectedProjectId) }
+  );
   const teams = projectTeamsData?.teams || [];
 
   // Fetch corresponding Members of the selected project
-  const { data: projectMembersData, isLoading: isLoadingMembers } = useQuery({
-    queryKey: ["project-members", workspaceId, selectedProjectId],
-    queryFn: () =>
-      getProjectMembersQueryFn({ workspaceId, projectId: selectedProjectId }),
-    enabled: Boolean(workspaceId && selectedProjectId),
-  });
+  const { data: projectMembersData, isLoading: isLoadingMembers } = useProjectMembersQuery(
+    { workspaceId, projectId: selectedProjectId },
+    { enabled: Boolean(workspaceId && selectedProjectId) }
+  );
   const projectMembers = projectMembersData?.members || [];
 
   // Determine user permissions / lead-head status
-  const { data: workspaceData } = useGetWorkspaceQuery(workspaceId);
+  const { data: workspaceData } = useWorkspaceQuery(workspaceId);
   const { data: myAssociationsData } = useGetMyAssociations(workspaceId);
 
   // 1. Workspace role check (OWNER, ADMIN, MANAGER have management authority)

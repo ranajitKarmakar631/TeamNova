@@ -26,10 +26,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "../../ui/textarea";
 import EmojiPickerComponent from "@/components/emoji-picker";
-import { ProjectType } from "@/types/api.type";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { editProjectMutationFn, getAllTeamsQueryFn } from "@/lib/api";
+import { useUpdateProjectMutation, ProjectType } from "@/features/project";
+import { useTeamsQuery } from "@/features/team";
 import { toast } from "@/hooks/use-toast";
 import { Loader, Users, X } from "lucide-react";
 
@@ -46,11 +46,10 @@ export default function EditProjectForm(props: {
 
   const projectId = project?._id as string;
 
-  const { data: teamsData, isLoading: isLoadingTeams } = useQuery({
-    queryKey: ["all-teams", workspaceId],
-    queryFn: () => getAllTeamsQueryFn({ workspaceId, pageSize: 100 }),
-    enabled: Boolean(workspaceId),
-  });
+  const { data: teamsData, isLoading: isLoadingTeams } = useTeamsQuery(
+    { workspaceId, pageSize: 100 },
+    { enabled: Boolean(workspaceId) }
+  );
 
   const teams = teamsData?.teams || [];
 
@@ -61,9 +60,7 @@ export default function EditProjectForm(props: {
     description: z.string().trim(),
   });
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: editProjectMutationFn,
-  });
+  const { mutate, isPending } = useUpdateProjectMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

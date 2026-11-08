@@ -31,10 +31,12 @@ import { Button } from "../ui/button";
 import { Permissions } from "@/constant";
 import PermissionsGuard from "../resuable/permission-guard";
 import { useState } from "react";
-import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
-import { PaginationType } from "@/types/api.type";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteProjectMutationFn } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useDeleteProjectMutation,
+  useProjectsQuery,
+  PaginationType,
+} from "@/features/project";
 import { toast } from "@/hooks/use-toast";
 
 export function NavProjects() {
@@ -52,16 +54,13 @@ export function NavProjects() {
   const [pageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(5);
 
-  const { mutate, isPending: isLoading } = useMutation({
-    mutationFn: deleteProjectMutationFn,
-  });
+  const { mutate, isPending: isLoading } = useDeleteProjectMutation();
 
-  const { data, isPending, isFetching, isError } =
-    useGetProjectsInWorkspaceQuery({
-      workspaceId,
-      pageSize,
-      pageNumber,
-    });
+  const { data, isPending, isFetching, isError } = useProjectsQuery({
+    workspaceId,
+    pageSize,
+    pageNumber,
+  });
 
   const projects = data?.projects || [];
   const pagination = data?.pagination || ({} as PaginationType);

@@ -46,7 +46,7 @@ import {
   ArrowDown,
   ArrowRight,
 } from "lucide-react";
-import { TaskType, TaskAssigneeType } from "@/types/api.type";
+
 import {
   TaskPriorityEnum,
   TaskPriorityEnumType,
@@ -54,15 +54,19 @@ import {
   TaskStatusEnumType,
 } from "@/constant";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import useGetWorkspaceQuery from "@/hooks/api/use-get-workspace";
-import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
+import { useQueryClient } from "@tanstack/react-query";
+import { useWorkspaceQuery } from "@/features/workspace";
 import {
-  editTaskMutationFn,
-  deleteTaskMutationFn,
-  getProjectMembersQueryFn,
-  getAllTeamsQueryFn,
-} from "@/lib/api";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+  useProjectMembersQuery,
+  useProjectsQuery,
+} from "@/features/project";
+import { useTeamsQuery } from "@/features/team";
+import {
+  useDeleteTaskMutation,
+  useUpdateTaskMutation,
+  TaskType,
+  TaskAssigneeType,
+} from "@/features/task";
 import { toast } from "@/hooks/use-toast";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import TaskComments from "./comments/task-comments";
@@ -188,11 +192,11 @@ export const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({
   }, [task]);
 
   // Workspace data
-  const { data: workspaceData } = useGetWorkspaceQuery(workspaceId);
+  const { data: workspaceData } = useWorkspaceQuery(workspaceId);
   const workspaceName = workspaceData?.workspace?.name || "Workspace";
 
   // Projects list
-  const { data: projectsData } = useGetProjectsInWorkspaceQuery({
+  const { data: projectsData } = useProjectsQuery({
     workspaceId,
   });
   const projects = projectsData?.projects || [];
@@ -200,24 +204,21 @@ export const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({
     projects.find((p) => p._id === selectedProjectId) || task.project;
 
   // Teams list
-  const { data: teamsData } = useQuery({
-    queryKey: ["all-teams", workspaceId],
-    queryFn: () => getAllTeamsQueryFn({ workspaceId, pageSize: 50 }),
-    enabled: !!workspaceId,
+  const { data: teamsData } = useTeamsQuery({
+    workspaceId,
+    pageSize: 50,
   });
   const teams = teamsData?.teams || [];
   const currentTeam = teams.find((t) => t._id === selectedTeamId) || task.team;
 
   // Project Members
-  const { data: projectMembersData } = useQuery({
-    queryKey: ["project-members", workspaceId, selectedProjectId],
-    queryFn: () =>
-      getProjectMembersQueryFn({
-        workspaceId,
-        projectId: selectedProjectId,
-      }),
-    enabled: Boolean(workspaceId && selectedProjectId),
-  });
+  const { data: projectMembersData } = useProjectMembersQuery(
+    {
+      workspaceId,
+      projectId: selectedProjectId,
+    },
+    { enabled: Boolean(workspaceId && selectedProjectId) }
+  );
   const rawProjectMembers = projectMembersData?.members || [];
   const availableMembers = React.useMemo(
     () =>
@@ -237,8 +238,7 @@ export const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({
     "Creator";
 
   // Mutations
-  const { mutateAsync: updateTask, isPending: isUpdating } = useMutation({
-    mutationFn: editTaskMutationFn,
+  const { mutateAsync: updateTask, isPending: isUpdating } = useUpdateTaskMutation({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["task", task._id] });
@@ -257,8 +257,7 @@ export const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({
     },
   });
 
-  const { mutateAsync: deleteTask, isPending: isDeleting } = useMutation({
-    mutationFn: deleteTaskMutationFn,
+  const { mutateAsync: deleteTask, isPending: isDeleting } = useDeleteTaskMutation({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
       toast({

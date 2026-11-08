@@ -8,8 +8,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useCallback } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { logoutMutationFn } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLogoutMutation } from "@/features/auth";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Loader } from "lucide-react";
@@ -23,8 +23,7 @@ const LogoutDialog = (props: {
 
   const queryClient = useQueryClient();
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: logoutMutationFn,
+  const { mutate, isPending } = useLogoutMutation({
     onSuccess: () => {
       queryClient.resetQueries({
         queryKey: ["authUser"],

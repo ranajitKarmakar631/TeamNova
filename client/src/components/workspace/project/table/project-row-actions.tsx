@@ -12,10 +12,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/resuable/confirm-dialog";
-import { ProjectType } from "@/types/api.type";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { deleteProjectMutationFn } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { useDeleteProjectMutation, ProjectType } from "@/features/project";
 import { toast } from "@/hooks/use-toast";
 import EditProjectDialog from "../edit-project-dialog";
 
@@ -34,9 +33,7 @@ export function ProjectTableRowActions({ row }: ProjectTableRowActionsProps) {
   const project = row.original;
   const projectId = project._id;
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: deleteProjectMutationFn,
-  });
+  const { mutate, isPending } = useDeleteProjectMutation();
 
   const handleCopyLink = () => {
     const url = `${window.location.origin}/workspace/${workspaceId}/project/${projectId}`;

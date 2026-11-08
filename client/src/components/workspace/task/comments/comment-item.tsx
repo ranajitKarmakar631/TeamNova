@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { formatDistanceToNowStrict, format } from "date-fns";
-import { CommentType } from "@/types/api.type";
+import { CommentType } from "@/features/task";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +35,7 @@ import {
   useDeleteComment,
   useToggleCommentReaction,
   useUpdateComment,
-} from "@/hooks/api/use-task-comments";
+} from "@/features/task";
 import {
   encryptCommentContent,
   decryptCommentContent,

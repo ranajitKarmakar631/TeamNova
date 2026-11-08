@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Loader, Shield, Users } from "lucide-react";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { getAllTeamsQueryFn } from "@/lib/api";
+import { useTeamsQuery } from "@/features/team";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
@@ -10,15 +9,10 @@ import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 export const RecentTeams = () => {
   const workspaceId = useWorkspaceId();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["all-teams", workspaceId, 5, 1],
-    queryFn: () =>
-      getAllTeamsQueryFn({
-        workspaceId,
-        pageNumber: 1,
-        pageSize: 5,
-      }),
-    enabled: !!workspaceId,
+  const { data, isLoading } = useTeamsQuery({
+    workspaceId,
+    pageNumber: 1,
+    pageSize: 5,
   });
 
   const teams = data?.teams || [];

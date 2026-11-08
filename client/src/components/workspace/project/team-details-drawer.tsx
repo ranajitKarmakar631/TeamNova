@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ProjectTeamItemType } from "@/types/api.type";
+import { ProjectTeamItemType } from "@/features/project";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 
 interface TeamDetailsDrawerProps {

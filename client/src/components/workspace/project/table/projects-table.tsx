@@ -2,14 +2,12 @@ import { FC, useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { X, Search, Backpack, UserCheck } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useDebounce from "@/hooks/use-debounce";
-import { ProjectType } from "@/types/api.type";
 import useProjectTableFilter from "@/hooks/use-project-table-filter";
 import { getProjectColumns } from "./project-columns";
 import { DataTable } from "../../task/table/table";
-import { getProjectsInWorkspaceQueryFn } from "@/lib/api";
+import { useProjectsQuery, ProjectType } from "@/features/project";
 import { useAuthContext } from "@/context/auth-provider";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -39,26 +37,16 @@ const ProjectsTable = () => {
     [workspaceId, associations]
   );
 
-  const { data, isLoading } = useQuery({
-    queryKey: [
-      "allprojects",
+  const { data, isLoading } = useProjectsQuery(
+    {
       workspaceId,
+      keyword: filters.keyword || undefined,
+      onlyMyProjects: viewFilter === "MY",
       pageNumber,
       pageSize,
-      filters.keyword,
-      viewFilter,
-    ],
-    queryFn: () =>
-      getProjectsInWorkspaceQueryFn({
-        workspaceId,
-        keyword: filters.keyword || undefined,
-        onlyMyProjects: viewFilter === "MY",
-        pageNumber,
-        pageSize,
-      }),
-    staleTime: 0,
-    enabled: !!workspaceId,
-  });
+    },
+    { staleTime: 0 }
+  );
 
   const projects: ProjectType[] = data?.projects || [];
   const totalCount = data?.pagination?.totalCount || 0;

@@ -6,9 +6,8 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { createWorkspaceMutationFn } from "@/lib/api";
+import { useCreateWorkspaceMutation } from "@/features/workspace";
 import { toast } from "@/hooks/use-toast";
 
 // UI Components from @/components/ui
@@ -18,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import useAuth from "@/hooks/api/use-auth";
+import { useAuth } from "@/features/auth";
 
 export interface AddWorkspaceFormData {
   name: string;
@@ -42,7 +41,6 @@ export default function AddWorkspace({
   isDialog = false,
 }: AddWorkspaceProps) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const { data: authData } = useAuth();
   const currentWorkspace = authData?.user?.currentWorkspace;
   const currentWorkspaceId =
@@ -63,16 +61,8 @@ export default function AddWorkspace({
   const [logo, setLogo] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: createWorkspaceMutationFn,
+  const { mutate, isPending } = useCreateWorkspaceMutation({
     onSuccess: (data) => {
-      queryClient.resetQueries({
-        queryKey: ["userWorkspaces"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["authUser"],
-      });
-
       toast({
         title: "Workspace created!",
         description: `"${data.workspace.name}" has been successfully created.`,

@@ -2,7 +2,7 @@ import React from "react";
 import {
   NotificationItemType,
   NotificationType,
-} from "@/types/notification.type";
+} from "@/features/notification";
 import { formatDistanceToNow } from "date-fns";
 import {
   ClipboardList,

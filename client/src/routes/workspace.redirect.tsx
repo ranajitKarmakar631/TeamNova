@@ -1,5 +1,5 @@
 import { DashboardSkeleton } from "@/components/skeleton-loaders/dashboard-skeleton";
-import useAuth from "@/hooks/api/use-auth";
+import { useAuth } from "@/features/auth";
 import { Navigate } from "react-router-dom";
 import { PROTECTED_ROUTES } from "./common/routePaths";
 

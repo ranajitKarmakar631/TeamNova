@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   Crown,
@@ -16,8 +15,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ProjectMemberItemType, TaskType } from "@/types/api.type";
-import { getProjectMemberTasksQueryFn } from "@/lib/api";
+import { useProjectMemberTasksQuery, ProjectMemberItemType } from "@/features/project";
+import { TaskType } from "@/features/task";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import EditTaskDialog from "../task/edit-task-dialog";
 
@@ -40,15 +39,10 @@ export const MemberDetailsDrawer = ({
 
   const userId = member?.user?._id;
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["project-member-tasks", projectId, userId],
-    queryFn: () =>
-      getProjectMemberTasksQueryFn({
-        workspaceId,
-        projectId,
-        userId: userId!,
-      }),
-    enabled: Boolean(workspaceId && projectId && userId && open),
+  const { data, isLoading } = useProjectMemberTasksQuery({
+    workspaceId,
+    projectId,
+    userId: userId || "",
   });
 
   if (!member) return null;

@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { TaskType } from "@/types/api.type";
 import { TaskStatusEnum, TaskStatusEnumType } from "@/constant";
 import { ColumnDefinition, TaskColumn } from "./task-column";
 import EditTaskDialog from "../edit-task-dialog";
 import CreateTaskDialog from "../create-task-dialog";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { editTaskMutationFn } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { useUpdateTaskMutation, TaskType } from "@/features/task";
 import { toast } from "@/hooks/use-toast";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -75,9 +74,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
     useState<TaskStatusEnumType | null>(null);
 
   // Mutation for updating task status on drop
-  const { mutateAsync: editTask } = useMutation({
-    mutationFn: editTaskMutationFn,
-  });
+  const { mutateAsync: editTask } = useUpdateTaskMutation();
 
   const draggedTask = tasks.find((t) => t._id === draggedTaskId) || null;
 

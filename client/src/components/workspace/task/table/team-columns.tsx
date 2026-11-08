@@ -7,7 +7,9 @@ import { DataTableColumnHeader } from "./table-column-header";
 import { TeamTableRowActions } from "./team-row-actions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { TeamType, AssociationType, AssociationRoles } from "@/types/api.type";
+import { TeamType } from "@/features/team";
+import { AssociationType } from "@/features/association";
+import { AssociationRoles } from "@/constant";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 

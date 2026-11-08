@@ -14,8 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "../ui/textarea";
 import { useAuthContext } from "@/context/auth-provider";
 import { useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { editWorkspaceMutationFn } from "@/lib/api";
+import { useEditWorkspaceMutation } from "@/features/workspace";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
@@ -25,12 +24,9 @@ export default function EditWorkspaceForm() {
   const { workspace, hasPermission } = useAuthContext();
   const canEditWorkspace = hasPermission(Permissions.EDIT_WORKSPACE);
 
-  const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: editWorkspaceMutationFn,
-  });
+  const { mutate, isPending } = useEditWorkspaceMutation();
 
   const formSchema = z.object({
     name: z.string().trim().min(1, {
@@ -61,14 +57,7 @@ export default function EditWorkspaceForm() {
       data: { ...values },
     };
     mutate(payload, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: ["workspace", workspaceId],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["userWorkspaces"],
-        });
-      },
+      onSuccess: () => {},
       onError: (error) => {
         toast({
           title: "Error",

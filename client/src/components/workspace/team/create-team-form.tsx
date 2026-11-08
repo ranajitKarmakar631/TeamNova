@@ -20,12 +20,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createTeamMutationFn } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCreateTeamMutation } from "@/features/team";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
 import { TeamStatusEnum } from "@/constant";
-import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
+import { useProjectsQuery } from "@/features/project";
 
 const formSchema = z.object({
   name: z.string().trim().min(1, {
@@ -52,16 +52,13 @@ export default function CreateTeamForm({
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
 
-  const { data: projectsData, isLoading: isLoadingProjects } =
-    useGetProjectsInWorkspaceQuery({
-      workspaceId,
-      skip: !!propProjectId,
-    });
+  const { data: projectsData, isLoading: isLoadingProjects } = useProjectsQuery({
+    workspaceId,
+    skip: !!propProjectId,
+  });
   const projects = projectsData?.projects || [];
 
-  const { mutate, isPending } = useMutation({
-    mutationFn: createTeamMutationFn,
-  });
+  const { mutate, isPending } = useCreateTeamMutation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

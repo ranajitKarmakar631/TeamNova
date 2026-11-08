@@ -6,11 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import CommentInput from "./comment-input";
 import CommentItem from "./comment-item";
-import {
-  useCreateComment,
-  useTaskComments,
-} from "@/hooks/api/use-task-comments";
-import useAuth from "@/hooks/api/use-auth";
+import { useCreateComment, useTaskComments } from "@/features/task";
+import { useAuth } from "@/features/auth";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { useAuthContext } from "@/context/auth-provider";
 import { Permissions } from "@/constant";

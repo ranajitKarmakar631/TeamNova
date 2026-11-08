@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import {
   Search,
   ArrowUpDown,
@@ -26,8 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useDebounce from "@/hooks/use-debounce";
-import { getProjectMembersQueryFn } from "@/lib/api";
-import { ProjectMemberItemType } from "@/types/api.type";
+import { useProjectMembersQuery, ProjectMemberItemType } from "@/features/project";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import MemberDetailsDrawer from "./member-details-drawer";
 
@@ -46,26 +44,13 @@ export const ProjectMembers = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Fetch project members with debounced search, filters, and sorting handled on the backend
-  const { data, isLoading, isError, isFetching } = useQuery({
-    queryKey: [
-      "project-members",
-      projectId,
-      workspaceId,
-      debouncedSearch,
-      teamFilter,
-      roleFilter,
-      sortBy,
-    ],
-    queryFn: () =>
-      getProjectMembersQueryFn({
-        workspaceId,
-        projectId: projectId!,
-        search: debouncedSearch.trim() || undefined,
-        teamId: teamFilter !== "ALL" ? teamFilter : undefined,
-        role: roleFilter !== "ALL" ? roleFilter : undefined,
-        sortBy,
-      }),
-    enabled: Boolean(workspaceId && projectId),
+  const { data, isLoading, isError, isFetching } = useProjectMembersQuery({
+    workspaceId,
+    projectId: projectId!,
+    search: debouncedSearch.trim() || undefined,
+    teamId: teamFilter !== "ALL" ? teamFilter : undefined,
+    role: roleFilter !== "ALL" ? roleFilter : undefined,
+    sortBy,
   });
 
   const members = data?.members || [];
