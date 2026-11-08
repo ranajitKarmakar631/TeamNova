@@ -4,6 +4,7 @@ import MemberModel from "../member/member.model";
 import ProjectModel from "../project/project.model";
 import TeamModel from "../teams/teams.model";
 import TaskModel from "./task.model";
+import CommentModel from "../comment/comment.model";
 import {
   BadRequestException,
   NotFoundException,
@@ -692,6 +693,9 @@ export const deleteTaskService = async (
       "Task not found or does not belong to the specified workspace"
     );
   }
+
+  // Clean up all comments associated with this task to prevent orphaned records
+  await CommentModel.deleteMany({ task: taskId });
 
   return;
 };

@@ -64,6 +64,7 @@ import { toast } from "@/hooks/use-toast";
 import { TaskType } from "@/types/api.type";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TaskComments } from "./comments";
 
 export default function EditTaskForm({
   task,
@@ -932,6 +933,17 @@ export default function EditTaskForm({
             </Button>
           </form>
         </Form>
+
+        {/* Task Discussion & Scalable Comments */}
+        <TaskComments
+          taskId={task._id}
+          projectId={projectId}
+          members={allAvailableMembers.map((m) => ({
+            _id: String(m.user?._id || m.userId || m._id),
+            name: m.user?.name || m.name || "Member",
+            profilePicture: m.user?.profilePicture || m.profilePicture || null,
+          }))}
+        />
       </div>
     </div>
   );

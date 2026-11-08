@@ -27,6 +27,14 @@ import {
   ProjectMemberTasksResponseType,
   GetProjectMembersPayloadType,
   GetProjectTeamsPayloadType,
+  CommentType,
+  CommentsResponseType,
+  CommentRepliesResponseType,
+  CreateCommentPayloadType,
+  UpdateCommentPayloadType,
+  DeleteCommentPayloadType,
+  ToggleCommentReactionPayloadType,
+  GetCommentsPayloadType,
 } from "../types/api.type";
 import {
   AllWorkspaceResponseType,
@@ -698,6 +706,116 @@ export const clearAllNotificationsMutationFn = async (payload?: {
   const response = await API.delete("/notifications", { data: payload });
   return response.data;
 };
+
+// ********** TASK COMMENT API CALLS ****************
+export const getTaskCommentsQueryFn = async ({
+  workspaceId,
+  taskId,
+  pageNumber = 1,
+  pageSize = 20,
+  cursor,
+  parentId,
+  sortOrder = "desc",
+}: GetCommentsPayloadType): Promise<CommentsResponseType> => {
+  const queryParams = new URLSearchParams();
+  if (pageNumber) queryParams.append("pageNumber", pageNumber.toString());
+  if (pageSize) queryParams.append("pageSize", pageSize.toString());
+  if (cursor) queryParams.append("cursor", cursor);
+  if (sortOrder) queryParams.append("sortOrder", sortOrder);
+  if (parentId !== undefined) queryParams.append("parentId", parentId === null ? "null" : parentId);
+
+  const response = await API.get(
+    `/comments/workspaces/${workspaceId}/tasks/${taskId}?${queryParams.toString()}`
+  );
+  return response.data;
+};
+
+export const getCommentRepliesQueryFn = async ({
+  workspaceId,
+  commentId,
+  pageNumber = 1,
+  pageSize = 20,
+}: {
+  workspaceId: string;
+  commentId: string;
+  pageNumber?: number;
+  pageSize?: number;
+}): Promise<CommentRepliesResponseType> => {
+  const queryParams = new URLSearchParams();
+  if (pageNumber) queryParams.append("pageNumber", pageNumber.toString());
+  if (pageSize) queryParams.append("pageSize", pageSize.toString());
+
+  const response = await API.get(
+    `/comments/workspaces/${workspaceId}/comments/${commentId}/replies?${queryParams.toString()}`
+  );
+  return response.data;
+};
+
+export const createCommentMutationFn = async ({
+  workspaceId,
+  taskId,
+  content,
+  parentId,
+  mentions,
+  attachments,
+}: CreateCommentPayloadType): Promise<{
+  message: string;
+  comment: CommentType;
+}> => {
+  const response = await API.post(
+    `/comments/workspaces/${workspaceId}/tasks/${taskId}`,
+    {
+      content,
+      parentId,
+      mentions,
+      attachments,
+    }
+  );
+  return response.data;
+};
+
+export const updateCommentMutationFn = async ({
+  workspaceId,
+  commentId,
+  content,
+}: UpdateCommentPayloadType): Promise<{
+  message: string;
+  comment: CommentType;
+}> => {
+  const response = await API.patch(
+    `/comments/workspaces/${workspaceId}/comments/${commentId}`,
+    { content }
+  );
+  return response.data;
+};
+
+export const deleteCommentMutationFn = async ({
+  workspaceId,
+  commentId,
+}: DeleteCommentPayloadType): Promise<{
+  message: string;
+}> => {
+  const response = await API.delete(
+    `/comments/workspaces/${workspaceId}/comments/${commentId}`
+  );
+  return response.data;
+};
+
+export const toggleCommentReactionMutationFn = async ({
+  workspaceId,
+  commentId,
+  emoji,
+}: ToggleCommentReactionPayloadType): Promise<{
+  message: string;
+  reactions: CommentType["reactions"];
+}> => {
+  const response = await API.post(
+    `/comments/workspaces/${workspaceId}/comments/${commentId}/reactions`,
+    { emoji }
+  );
+  return response.data;
+};
+
 
 
 

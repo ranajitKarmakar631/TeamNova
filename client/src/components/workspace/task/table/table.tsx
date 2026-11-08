@@ -44,6 +44,7 @@ interface DataTableProps<TData, TValue> {
   pagination?: PaginationProps;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
+  onRowClick?: (row: TData) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -54,6 +55,7 @@ export function DataTable<TData, TValue>({
   pagination,
   onPageChange,
   onPageSizeChange,
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
   const { totalCount = 0, pageNumber = 1, pageSize = 10 } = pagination || {};
 
@@ -146,9 +148,25 @@ export function DataTable<TData, TValue>({
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
+                    onClick={() => onRowClick?.(row.original)}
+                    className={
+                      onRowClick
+                        ? "cursor-pointer hover:bg-muted/40 transition-colors"
+                        : ""
+                    }
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell
+                        key={cell.id}
+                        onClick={(e) => {
+                          if (
+                            cell.column.id === "_id" ||
+                            cell.column.id === "actions"
+                          ) {
+                            e.stopPropagation();
+                          }
+                        }}
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()

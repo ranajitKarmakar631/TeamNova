@@ -9,7 +9,8 @@ import {
   AlertTriangle, 
   Copy, 
   Check, 
-  Clock 
+  Clock,
+  MessageSquare 
 } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 
@@ -193,6 +194,16 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           {!isOverdue && dueDateText && (
             <span className="text-[11px] text-muted-foreground font-medium">
               {dueDateText}
+            </span>
+          )}
+
+          {(task.commentCount ?? 0) > 0 && (
+            <span
+              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground font-medium"
+              title={`${task.commentCount} comments`}
+            >
+              <MessageSquare className="w-3 h-3" />
+              {task.commentCount}
             </span>
           )}
         </div>

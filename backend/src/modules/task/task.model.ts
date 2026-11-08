@@ -9,6 +9,7 @@ import {
 import { generateTaskCode } from "../../common/utils/uuid";
 
 export interface TaskDocument extends Document {
+  _id: mongoose.Types.ObjectId;
   taskCode: string;
   title: string;
   description: string | null;
@@ -21,6 +22,7 @@ export interface TaskDocument extends Document {
   reportedTo: mongoose.Types.ObjectId | null;
   createdBy: mongoose.Types.ObjectId;
   dueDate: Date | null;
+  commentCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -86,6 +88,11 @@ const taskSchema = new Schema<TaskDocument>(
     dueDate: {
       type: Date,
       default: null,
+    },
+    commentCount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   {

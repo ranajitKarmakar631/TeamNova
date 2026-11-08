@@ -9,6 +9,7 @@ import {
   UserRound,
   LayoutDashboard,
   Send,
+  MessageSquare,
 } from "lucide-react";
 import {
   SidebarGroup,
@@ -67,6 +68,11 @@ export function NavMain() {
       title: "Members",
       url: `/workspace/${workspaceId}/members`,
       icon: UserRound,
+    },
+    {
+      title: "Chat",
+      url: `/workspace/${workspaceId}/chat`,
+      icon: MessageSquare,
     },
     ...(canInviteMember
       ? [

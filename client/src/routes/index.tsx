@@ -12,7 +12,6 @@ import AppLayout from "@/layout/app.layout";
 import BaseLayout from "@/layout/base.layout";
 import NotFound from "@/page/errors/NotFound";
 import AddWorkspace from "@/components/add-workspace";
-import ChatPage from "@/chat/Page";
 
 function AppRoutes() {
   return (
@@ -41,9 +40,6 @@ function AppRoutes() {
         {/* Protected routes */}
         <Route element={<ProtectedRoute />}>
           {/* If user visits /workspace directly, redirect to /workspace/:workspaceId or CREATE_WORKSPACE */}
-          <Route path='/chat' element = {<ChatPage/>}>
-
-          </Route>
           <Route path="/workspace" element={<WorkspaceRedirect />} />
 
           {/* Standalone create workspace page */}

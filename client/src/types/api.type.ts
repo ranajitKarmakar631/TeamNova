@@ -462,6 +462,7 @@ export type TaskType = {
   createdBy?: string;
   dueDate: string;
   taskCode: string;
+  commentCount?: number;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -664,4 +665,104 @@ export type AvailableMembersResponseType = {
   isCurrentUserJoined: boolean;
   joinedVia: "TEAM" | "DIRECT" | null;
 };
+
+// ********** TASK COMMENT TYPES ****************
+export type CommentAuthorType = {
+  _id: string;
+  name: string;
+  email: string;
+  profilePicture?: string | null;
+};
+
+export type CommentAttachmentType = {
+  name: string;
+  url: string;
+  size?: number;
+  type?: string;
+};
+
+export type CommentReactionType = {
+  emoji: string;
+  users: Array<{
+    _id: string;
+    name: string;
+    profilePicture?: string | null;
+  }>;
+};
+
+export type CommentType = {
+  _id: string;
+  task: string;
+  workspace: string;
+  project: string;
+  author: CommentAuthorType;
+  content: any; // Lexical JSON AST object or string
+  parentId: string | null;
+  rootParentId: string | null;
+  replyCount: number;
+  mentions: CommentAuthorType[];
+  attachments: CommentAttachmentType[];
+  reactions: CommentReactionType[];
+  isEdited: boolean;
+  editedAt: string | null;
+  isDeleted: boolean;
+  deletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateCommentPayloadType = {
+  workspaceId: string;
+  taskId: string;
+  content: any;
+  parentId?: string | null;
+  mentions?: string[];
+  attachments?: CommentAttachmentType[];
+};
+
+export type UpdateCommentPayloadType = {
+  workspaceId: string;
+  commentId: string;
+  content: any;
+};
+
+export type DeleteCommentPayloadType = {
+  workspaceId: string;
+  commentId: string;
+};
+
+export type ToggleCommentReactionPayloadType = {
+  workspaceId: string;
+  commentId: string;
+  emoji: string;
+};
+
+export type GetCommentsPayloadType = {
+  workspaceId: string;
+  taskId: string;
+  pageNumber?: number;
+  pageSize?: number;
+  cursor?: string;
+  parentId?: string | null;
+  sortOrder?: "asc" | "desc";
+};
+
+export type CommentsResponseType = {
+  message: string;
+  comments: CommentType[];
+  pagination: PaginationType & {
+    hasMore?: boolean;
+    nextCursor?: string | null;
+  };
+};
+
+export type CommentRepliesResponseType = {
+  message: string;
+  parentComment: CommentType;
+  replies: CommentType[];
+  pagination: PaginationType & {
+    hasMore?: boolean;
+  };
+};
+
 

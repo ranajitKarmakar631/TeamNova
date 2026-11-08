@@ -15,6 +15,7 @@ import { TaskBoard } from "./board/task-board";
 import { DataTable } from "./table/table";
 import { getColumns } from "./table/columns";
 import { Calendar as CalendarIcon } from "lucide-react";
+import TaskDetailSheet from "./task-detail-sheet";
 
 interface TaskViewProps {
   projectId?: string;
@@ -38,6 +39,7 @@ export const TaskView: React.FC<TaskViewProps> = ({ projectId: propProjectId }) 
     "none"
   );
   const [recentlyUpdated, setRecentlyUpdated] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskType | null>(null);
 
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(viewMode === "board" ? 100 : 10);
@@ -162,6 +164,7 @@ export const TaskView: React.FC<TaskViewProps> = ({ projectId: propProjectId }) 
             isLoading={isLoading}
             data={tasks}
             columns={columns}
+            onRowClick={(task) => setSelectedTask(task)}
             onPageChange={setPageNumber}
             onPageSizeChange={setPageSize}
             pagination={{
@@ -181,6 +184,15 @@ export const TaskView: React.FC<TaskViewProps> = ({ projectId: propProjectId }) 
             View scheduled tasks by their due dates. Switch back to Board or List to manage cards.
           </p>
         </div>
+      )}
+
+      {/* Slide-over Task Detail Sheet */}
+      {selectedTask && (
+        <TaskDetailSheet
+          task={selectedTask}
+          isOpen={!!selectedTask}
+          onClose={() => setSelectedTask(null)}
+        />
       )}
     </div>
   );

@@ -19,6 +19,7 @@ import {
 import { priorities, statuses } from "./data";
 import { TaskType } from "@/types/api.type";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MessageSquare } from "lucide-react";
 
 export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
   const columns: ColumnDef<TaskType>[] = [
@@ -52,14 +53,24 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
         <DataTableColumnHeader column={column} title="Title" />
       ),
       cell: ({ row }) => {
+        const commentCount = row.original.commentCount ?? 0;
         return (
-          <div className="flex flex-wrap space-x-2">
+          <div className="flex flex-wrap items-center space-x-2">
             <Badge variant="outline" className="capitalize shrink-0 h-[25px]">
               {row.original.taskCode}
             </Badge>
-            <span className="block lg:max-w-[220px] max-w-[200px] font-medium">
+            <span className="block lg:max-w-[220px] max-w-[200px] font-medium truncate">
               {row.original.title}
             </span>
+            {commentCount > 0 && (
+              <span
+                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground font-medium"
+                title={`${commentCount} comments`}
+              >
+                <MessageSquare className="w-3 h-3" />
+                {commentCount}
+              </span>
+            )}
           </div>
         );
       },

@@ -106,6 +106,7 @@ All paths below are relative to `BASE_PATH` (default `/api`):
 | `/member` | Join workspace using an invite code |
 | `/project` | Create/list/get/update/delete projects scoped to a workspace; project analytics |
 | `/task` | Create/list/get/update/delete tasks scoped to a project/workspace |
+| `/comments` | Paginated task comments, replies, reactions, mentions, edits & soft-deletes |
 | `/notifications` | List user notifications (paginated), unread count, mark read, mark all read, delete, clear, queue notifications |
 
 For exact request schemas and response behavior, use each feature's route, controller, validation, and service files as the source of truth.
@@ -145,6 +146,8 @@ erDiagram
   WORKSPACE ||--o{ MEMBER : contains
   WORKSPACE ||--o{ PROJECT : owns
   PROJECT ||--o{ TASK : contains
+  TASK ||--o{ COMMENT : has
+  COMMENT ||--o{ COMMENT : replies_to
   ROLE ||--o{ MEMBER : assigned_to
   USER ||--o{ ACCOUNT : authenticates_with
 ```
