@@ -10,7 +10,7 @@ export const useAuthUserQuery = (
   return useQuery<CurrentUserResponseType, CustomError>({
     queryKey: authKeys.authUser,
     queryFn: getCurrentUserApi,
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     retry: (failureCount, error: any) => {
       if (
         error?.response?.status === 401 ||

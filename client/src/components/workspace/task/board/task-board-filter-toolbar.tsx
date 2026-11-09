@@ -33,7 +33,7 @@ interface FilterState {
 
 interface TaskBoardFilterToolbarProps {
   filters: FilterState;
-  setFilters: (filters: FilterState) => void;
+  setFilters: (filters: any) => void;
   isRefetching?: boolean;
   projects?: { _id: string; name: string; emoji?: string }[];
   teams?: { _id: string; name: string }[];
@@ -64,14 +64,17 @@ export const TaskBoardFilterToolbar: React.FC<TaskBoardFilterToolbarProps> = ({
   }, [filters.keyword]);
 
   useEffect(() => {
-    const nextKeyword = debouncedSearch ? debouncedSearch : null;
-    if ((nextKeyword || null) !== (filters.keyword || null)) {
-      setFilters({
-        ...filters,
-        keyword: nextKeyword,
-      });
-    }
-  }, [debouncedSearch, filters, setFilters]);
+    setFilters((prev: FilterState) => {
+      const nextKeyword = debouncedSearch ? debouncedSearch : null;
+      if ((nextKeyword || null) !== (prev.keyword || null)) {
+        return {
+          ...prev,
+          keyword: nextKeyword,
+        };
+      }
+      return prev;
+    });
+  }, [debouncedSearch, setFilters]);
 
   // By default, filter to current user's tasks
   const isOnlyMyTasks =

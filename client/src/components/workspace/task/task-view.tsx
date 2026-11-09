@@ -76,20 +76,17 @@ export const TaskView: React.FC<TaskViewProps> = ({ projectId: propProjectId }) 
       : (filters.assigneeId || currentUserId || null);
 
   // Query tasks with keepPreviousData to completely eliminate "jhatka" (layout shifts / blank flickers)
-  const { data, isLoading, isFetching } = useTasksQuery(
-    {
-      workspaceId,
-      keyword: filters.keyword,
-      priority: (filters.priority as TaskPriorityEnumType) || null,
-      status: (filters.status as TaskStatusEnumType) || null,
-      projectId: projectId || filters.projectId,
-      assignedTo: effectiveAssigneeId,
-      teamId: filters.teamId,
-      pageNumber,
-      pageSize,
-    },
-    { staleTime: 0 }
-  );
+  const { data, isLoading, isFetching } = useTasksQuery({
+    workspaceId,
+    keyword: filters.keyword,
+    priority: (filters.priority as TaskPriorityEnumType) || null,
+    status: (filters.status as TaskStatusEnumType) || null,
+    projectId: projectId || filters.projectId,
+    assignedTo: effectiveAssigneeId,
+    teamId: filters.teamId,
+    pageNumber,
+    pageSize,
+  });
 
   const isRefetching = isFetching && !isLoading;
   const tasks: TaskType[] = data?.tasks || [];

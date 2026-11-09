@@ -122,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       user,
       workspace,
       associations: associations || [],
-      permissions: [...permissions],
+      permissions: permissions as PermissionType[],
       hasPermission,
       error: authError || workspaceError || null,
       isLoading: isAuthLoading,

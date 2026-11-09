@@ -37,16 +37,13 @@ const ProjectsTable = () => {
     [workspaceId, associations]
   );
 
-  const { data, isLoading } = useProjectsQuery(
-    {
-      workspaceId,
-      keyword: filters.keyword || undefined,
-      onlyMyProjects: viewFilter === "MY",
-      pageNumber,
-      pageSize,
-    },
-    { staleTime: 0 }
-  );
+  const { data, isLoading } = useProjectsQuery({
+    workspaceId,
+    keyword: filters.keyword || undefined,
+    onlyMyProjects: viewFilter === "MY",
+    pageNumber,
+    pageSize,
+  });
 
   const projects: ProjectType[] = data?.projects || [];
   const totalCount = data?.pagination?.totalCount || 0;

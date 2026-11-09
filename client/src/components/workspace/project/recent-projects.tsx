@@ -27,7 +27,7 @@ const RecentProjects = () => {
          flex"
         />
       ) : null}
-      {projects?.length === 0 && (
+      {!isPending && projects?.length === 0 && (
         <div
           className="font-semibold
          text-sm text-muted-foreground

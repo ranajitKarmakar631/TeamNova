@@ -13,7 +13,12 @@ const PermissionsGuard: React.FC<PermissionsGuardProps> = ({
   showMessage = false,
   children,
 }) => {
-  const { hasPermission } = useAuthContext();
+  const { hasPermission, isLoading, workspaceLoading } = useAuthContext();
+
+  // Prevent flashing unauthorized message while auth or workspace is still loading
+  if (isLoading || workspaceLoading) {
+    return null;
+  }
 
   if (!hasPermission(requiredPermission)) {
     return (

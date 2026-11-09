@@ -129,8 +129,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [user?._id, queryClient]);
 
+  const contextValue = React.useMemo(
+    () => ({ socket, isConnected, unreadCount }),
+    [socket, isConnected, unreadCount]
+  );
+
   return (
-    <SocketContext.Provider value={{ socket, isConnected, unreadCount }}>
+    <SocketContext.Provider value={contextValue}>
       {children}
     </SocketContext.Provider>
   );

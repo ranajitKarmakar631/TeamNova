@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/context/auth-provider";
 import { toast } from "@/hooks/use-toast";
@@ -112,7 +112,7 @@ export const InviteMember = () => {
   );
 
   // Update projects list when real projects load
-  useMemo(() => {
+  useEffect(() => {
     if (projectsData?.projects && projectsData.projects.length > 0) {
       const realProjects: ProjectOption[] = projectsData.projects.map(
         (p: any, idx: number) => ({
@@ -123,7 +123,7 @@ export const InviteMember = () => {
       );
       setProjectsState(realProjects);
     }
-  }, [projectsData]);
+  }, [projectsData?.projects]);
 
   // Query workspace invitations from API
   const {
@@ -547,7 +547,7 @@ export const InviteMember = () => {
         showMessage
         requiredPermission={Permissions.INVITE_MEMBER}
       >
-        {workspaceLoading ? (
+        {workspaceLoading && !workspace ? (
           <div className="flex justify-center items-center py-16">
             <Loader className="w-8 h-8 animate-spin text-slate-500" />
           </div>

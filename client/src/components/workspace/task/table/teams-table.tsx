@@ -39,17 +39,14 @@ const TeamsTable = () => {
     [workspaceId, associations]
   );
 
-  const { data, isLoading } = useTeamsQuery(
-    {
-      workspaceId,
-      keyword: filters.keyword,
-      status: filters.status,
-      onlyMyTeams: viewFilter === "MY",
-      pageNumber,
-      pageSize,
-    },
-    { staleTime: 0 }
-  );
+  const { data, isLoading } = useTeamsQuery({
+    workspaceId,
+    keyword: filters.keyword,
+    status: filters.status,
+    onlyMyTeams: viewFilter === "MY",
+    pageNumber,
+    pageSize,
+  });
 
   const teams: TeamType[] = data?.teams || [];
   const totalCount = data?.pagination?.totalCount || 0;

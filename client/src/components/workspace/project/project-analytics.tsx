@@ -9,10 +9,10 @@ const ProjectAnalytics = () => {
 
   const workspaceId = useWorkspaceId();
 
-  const { data, isPending } = useProjectAnalyticsQuery(
-    { workspaceId, projectId },
-    { staleTime: 0 }
-  );
+  const { data, isPending } = useProjectAnalyticsQuery({
+    workspaceId,
+    projectId,
+  });
 
   const analytics = data?.analytics;
 

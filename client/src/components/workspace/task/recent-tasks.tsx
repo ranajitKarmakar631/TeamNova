@@ -15,10 +15,7 @@ import { Loader } from "lucide-react";
 const RecentTasks = () => {
   const workspaceId = useWorkspaceId();
 
-  const { data, isLoading } = useTasksQuery(
-    { workspaceId },
-    { staleTime: 0 }
-  );
+  const { data, isLoading } = useTasksQuery({ workspaceId });
 
   const tasks: TaskType[] = data?.tasks || [];
 
@@ -33,7 +30,7 @@ const RecentTasks = () => {
         />
       ) : null}
 
-      {tasks?.length === 0 && (
+      {!isLoading && tasks?.length === 0 && (
         <div
           className="font-semibold
          text-sm text-muted-foreground

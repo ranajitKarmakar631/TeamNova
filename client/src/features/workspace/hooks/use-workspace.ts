@@ -14,7 +14,7 @@ export const useWorkspaceQuery = (
   return useQuery<WorkspaceByIdResponseType, CustomError>({
     queryKey: workspaceKeys.detail(workspaceId),
     queryFn: () => getWorkspaceByIdApi(workspaceId),
-    staleTime: 0,
+    staleTime: 60 * 1000, // 1 minute
     retry: 2,
     enabled: !!workspaceId,
     ...options,
