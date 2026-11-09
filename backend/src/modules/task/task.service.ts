@@ -24,6 +24,8 @@ import {
   NotificationTypeEnum,
   NotificationPriorityEnum,
 } from "../notification";
+import { deleteCache } from "../../redis/redis.service";
+import { REDIS_KEYS } from "../../redis/redis.keys";
 
 // Helper to verify user authority for project and team tasks
 export interface TaskAuthority {
@@ -386,6 +388,13 @@ export const createTaskService = async (
     }
   }
 
+  // Invalidate cached analytics and project overview
+  await deleteCache(
+    REDIS_KEYS.WORKSPACE_ANALYTICS(workspaceId),
+    REDIS_KEYS.PROJECT_ANALYTICS(projectId),
+    REDIS_KEYS.PROJECT_OVERVIEW(projectId)
+  );
+
   return { task };
 };
 
@@ -563,6 +572,13 @@ export const updateTaskService = async (
     }
   }
 
+  // Invalidate cached analytics and project overview
+  await deleteCache(
+    REDIS_KEYS.WORKSPACE_ANALYTICS(workspaceId),
+    REDIS_KEYS.PROJECT_ANALYTICS(projectId),
+    REDIS_KEYS.PROJECT_OVERVIEW(projectId)
+  );
+
   return { updatedTask };
 };
 
@@ -703,6 +719,14 @@ export const deleteTaskService = async (
 
   // Clean up all comments associated with this task to prevent orphaned records
   await CommentModel.deleteMany({ task: taskId });
+
+  if (task.project) {
+    await deleteCache(
+      REDIS_KEYS.WORKSPACE_ANALYTICS(workspaceId),
+      REDIS_KEYS.PROJECT_ANALYTICS(task.project.toString()),
+      REDIS_KEYS.PROJECT_OVERVIEW(task.project.toString())
+    );
+  }
 
   return;
 };

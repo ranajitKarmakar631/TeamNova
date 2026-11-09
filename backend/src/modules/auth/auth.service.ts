@@ -165,6 +165,9 @@ export const refreshTokenService = async (refreshToken: string) => {
   };
 };
 
+import { deleteCache } from "../../redis/redis.service";
+import { REDIS_KEYS } from "../../redis/redis.keys";
+
 export const logoutUserService = async ({
   refreshToken,
   userId,
@@ -173,14 +176,24 @@ export const logoutUserService = async ({
   userId?: string;
 }) => {
   if (refreshToken) {
-    await AccountModel.updateOne(
+    const account = await AccountModel.findOneAndUpdate(
       { refreshToken },
       { refreshToken: null, tokenExpiry: null }
     );
+    if (account?.userId) {
+      await deleteCache(
+        REDIS_KEYS.USER_SESSION(account.userId.toString()),
+        REDIS_KEYS.USER_PROFILE(account.userId.toString())
+      );
+    }
   } else if (userId) {
     await AccountModel.updateOne(
       { userId, provider: ProviderEnum.EMAIL },
       { refreshToken: null, tokenExpiry: null }
+    );
+    await deleteCache(
+      REDIS_KEYS.USER_SESSION(userId),
+      REDIS_KEYS.USER_PROFILE(userId)
     );
   }
 };

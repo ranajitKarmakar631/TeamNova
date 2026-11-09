@@ -24,8 +24,117 @@ import {
 } from "./notification.socket";
 import { sendEmail } from "../../config/sendMail";
 import { GetNotificationsQuery } from "./notification.validation";
+import { redis } from "../../redis/redis.service";
+import { REDIS_KEYS } from "../../redis/redis.keys";
 
 export class NotificationService {
+  /**
+   * Helper to retrieve cached unread count or query MongoDB
+   */
+  public async getCachedOrDbUnreadCount(
+    userId: string,
+    workspaceId?: string
+  ): Promise<number> {
+    const key = REDIS_KEYS.NOTIFICATION_UNREAD_COUNT(userId, workspaceId);
+    try {
+      const cached = await redis.get(key);
+      if (cached !== null) {
+        return Number(cached);
+      }
+    } catch (err) {
+      console.warn("[Redis] Failed to get unread count cache:", err);
+    }
+
+    const filter: Record<string, any> = {
+      recipient: new mongoose.Types.ObjectId(userId),
+      isRead: false,
+    };
+    if (workspaceId && mongoose.isValidObjectId(workspaceId)) {
+      filter.workspace = new mongoose.Types.ObjectId(workspaceId);
+    }
+
+    const count = await NotificationModel.countDocuments(filter);
+    try {
+      await redis.set(key, count, "EX", 3600);
+    } catch {}
+    return count;
+  }
+
+  /**
+   * Atomic increment of unread counter in Redis
+   */
+  public async incrementUnreadCount(
+    userId: string,
+    workspaceId?: string | null
+  ): Promise<number> {
+    const allKey = REDIS_KEYS.NOTIFICATION_UNREAD_COUNT(userId);
+    try {
+      const exists = await redis.exists(allKey);
+      if (exists) {
+        const count = await redis.incr(allKey);
+        if (workspaceId) {
+          const wsKey = REDIS_KEYS.NOTIFICATION_UNREAD_COUNT(userId, workspaceId);
+          if (await redis.exists(wsKey)) {
+            await redis.incr(wsKey);
+          }
+        }
+        return count;
+      }
+    } catch (err) {
+      console.warn("[Redis] Failed to incr unread count:", err);
+    }
+    return this.getCachedOrDbUnreadCount(userId, workspaceId || undefined);
+  }
+
+  /**
+   * Atomic decrement of unread counter in Redis
+   */
+  public async decrementUnreadCount(
+    userId: string,
+    workspaceId?: string | null
+  ): Promise<number> {
+    const allKey = REDIS_KEYS.NOTIFICATION_UNREAD_COUNT(userId);
+    try {
+      let count = await redis.decr(allKey);
+      if (count < 0) {
+        await redis.set(allKey, 0);
+        count = 0;
+      }
+      if (workspaceId) {
+        const wsKey = REDIS_KEYS.NOTIFICATION_UNREAD_COUNT(userId, workspaceId);
+        let wsCount = await redis.decr(wsKey);
+        if (wsCount < 0) await redis.set(wsKey, 0);
+      }
+      return count;
+    } catch (err) {
+      console.warn("[Redis] Failed to decr unread count:", err);
+    }
+    return this.getCachedOrDbUnreadCount(userId, workspaceId || undefined);
+  }
+
+  /**
+   * Reset unread counter to 0 in Redis
+   */
+  public async resetUnreadCount(
+    userId: string,
+    workspaceId?: string
+  ): Promise<void> {
+    try {
+      if (workspaceId) {
+        await redis.set(REDIS_KEYS.NOTIFICATION_UNREAD_COUNT(userId, workspaceId), 0);
+        const total = await NotificationModel.countDocuments({
+          recipient: new mongoose.Types.ObjectId(userId),
+          isRead: false,
+        });
+        await redis.set(REDIS_KEYS.NOTIFICATION_UNREAD_COUNT(userId), total);
+      } else {
+        await redis.set(REDIS_KEYS.NOTIFICATION_UNREAD_COUNT(userId), 0);
+      }
+    } catch (err) {
+      console.warn("[Redis] Failed to reset unread count:", err);
+    }
+  }
+
   /**
    * Queue a single notification for asynchronous processing and delivery
    */
@@ -109,11 +218,11 @@ export class NotificationService {
 
     const payload = populatedNotification || notification;
 
-    // Calculate updated unread count for recipient
-    const unreadCount = await NotificationModel.countDocuments({
-      recipient: data.recipient,
-      isRead: false,
-    });
+    // Calculate updated unread count for recipient using Redis
+    const unreadCount = await this.incrementUnreadCount(
+      data.recipient,
+      data.workspaceId
+    );
 
     // Deliver via real-time WebSocket
     sendNotificationViaSocket(data.recipient, payload);
@@ -177,10 +286,10 @@ export class NotificationService {
     await Promise.all(
       createdDocs.map(async (doc) => {
         const recipientId = doc.recipient.toString();
-        const unreadCount = await NotificationModel.countDocuments({
-          recipient: recipientId,
-          isRead: false,
-        });
+        const unreadCount = await this.incrementUnreadCount(
+          recipientId,
+          data.workspaceId
+        );
 
         sendNotificationViaSocket(recipientId, doc);
         sendUnreadCountViaSocket(recipientId, unreadCount);
@@ -245,16 +354,7 @@ export class NotificationService {
    * Get unread notification count for user
    */
   public async getUnreadCount(userId: string, workspaceId?: string) {
-    const filter: Record<string, any> = {
-      recipient: new mongoose.Types.ObjectId(userId),
-      isRead: false,
-    };
-
-    if (workspaceId && mongoose.isValidObjectId(workspaceId)) {
-      filter.workspace = new mongoose.Types.ObjectId(workspaceId);
-    }
-
-    const unreadCount = await NotificationModel.countDocuments(filter);
+    const unreadCount = await this.getCachedOrDbUnreadCount(userId, workspaceId);
     return { unreadCount };
   }
 
@@ -281,10 +381,10 @@ export class NotificationService {
       await notification.save();
     }
 
-    const unreadCount = await NotificationModel.countDocuments({
-      recipient: userId,
-      isRead: false,
-    });
+    const unreadCount = await this.decrementUnreadCount(
+      userId,
+      notification.workspace?.toString()
+    );
 
     // Notify client through socket
     sendNotificationReadViaSocket(userId, notificationId, unreadCount);
@@ -317,6 +417,8 @@ export class NotificationService {
       },
     });
 
+    await this.resetUnreadCount(userId, workspaceId);
+
     // Emit socket event
     sendAllNotificationsReadViaSocket(userId);
     sendUnreadCountViaSocket(userId, 0);
@@ -345,10 +447,18 @@ export class NotificationService {
       throw new NotFoundException("Notification not found");
     }
 
-    const unreadCount = await NotificationModel.countDocuments({
-      recipient: userId,
-      isRead: false,
-    });
+    let unreadCount: number;
+    if (!notification.isRead) {
+      unreadCount = await this.decrementUnreadCount(
+        userId,
+        notification.workspace?.toString()
+      );
+    } else {
+      unreadCount = await this.getCachedOrDbUnreadCount(
+        userId,
+        notification.workspace?.toString()
+      );
+    }
 
     sendNotificationDeletedViaSocket(userId, notificationId, unreadCount);
     sendUnreadCountViaSocket(userId, unreadCount);
@@ -373,6 +483,8 @@ export class NotificationService {
     }
 
     const result = await NotificationModel.deleteMany(filter);
+
+    await this.resetUnreadCount(userId, workspaceId);
 
     sendAllNotificationsReadViaSocket(userId);
     sendUnreadCountViaSocket(userId, 0);

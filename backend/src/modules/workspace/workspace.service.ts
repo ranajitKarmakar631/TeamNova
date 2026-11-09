@@ -13,6 +13,8 @@ import AssociationModel from "../association/association.model";
 import WorkspaceInvitation from "../invite/invite.model";
 import CommentModel from "../comment/comment.model";
 import NotificationModel from "../notification/notification.model";
+import { getJsonCache, setJsonCache, deleteCache } from "../../redis/redis.service";
+import { REDIS_KEYS, REDIS_TTL } from "../../redis/redis.keys";
 
 //********************************
 // CREATE NEW WORKSPACE
@@ -101,6 +103,12 @@ export const getWorkspaceByIdService = async (workspaceId: string) => {
 
 
 export const getWorkspaceMembersService = async (workspaceId: string) => {
+  const cacheKey = REDIS_KEYS.WORKSPACE_MEMBERS(workspaceId);
+  const cached = await getJsonCache<{ members: any[]; roles: any[] }>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   // Fetch all members of the workspace
   const members = await MemberModel.find({
     workspaceId,
@@ -124,10 +132,18 @@ export const getWorkspaceMembersService = async (workspaceId: string) => {
     .select("-permission")
     .lean();
 
-  return { members, roles };
+  const result = { members, roles };
+  await setJsonCache(cacheKey, result, REDIS_TTL.MEMBERS);
+  return result;
 };
 
 export const getWorkspaceAnalyticsService = async (workspaceId: string) => {
+  const cacheKey = REDIS_KEYS.WORKSPACE_ANALYTICS(workspaceId);
+  const cached = await getJsonCache<{ analytics: any }>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const currentDate = new Date();
 
   const totalTasks = await TaskModel.countDocuments({
@@ -151,7 +167,9 @@ export const getWorkspaceAnalyticsService = async (workspaceId: string) => {
     completedTasks,
   };
 
-  return { analytics };
+  const result = { analytics };
+  await setJsonCache(cacheKey, result, REDIS_TTL.ANALYTICS);
+  return result;
 };
 
 export const changeMemberRoleService = async (
@@ -193,6 +211,12 @@ export const changeMemberRoleService = async (
 
   member.role = role._id as any;
   await member.save();
+
+  // Invalidate cached member role and workspace members list
+  await deleteCache(
+    REDIS_KEYS.WORKSPACE_MEMBER_ROLE(workspaceId, member.userId.toString()),
+    REDIS_KEYS.WORKSPACE_MEMBERS(workspaceId)
+  );
 
   return {
     member,
@@ -250,6 +274,12 @@ export const removeWorkspaceMemberService = async (
       : null;
     await targetUser.save();
   }
+
+  // Invalidate member role and workspace members list cache
+  await deleteCache(
+    REDIS_KEYS.WORKSPACE_MEMBER_ROLE(workspaceId, member.userId.toString()),
+    REDIS_KEYS.WORKSPACE_MEMBERS(workspaceId)
+  );
 
   return {
     message: "Member removed from workspace successfully",
@@ -321,6 +351,12 @@ export const deleteWorkspaceService = async (
   }
 
   await workspace.deleteOne();
+
+  await deleteCache(
+    REDIS_KEYS.WORKSPACE_EXISTS(workspaceId),
+    REDIS_KEYS.WORKSPACE_ANALYTICS(workspaceId),
+    REDIS_KEYS.WORKSPACE_MEMBERS(workspaceId)
+  );
 
   return {
     currentWorkspace: user.currentWorkspace,

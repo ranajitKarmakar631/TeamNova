@@ -69,8 +69,24 @@ export const refreshTokenController = asyncHandler(
   }
 );
 
+import { redis } from "../../redis/redis.service";
+import { REDIS_KEYS, REDIS_TTL } from "../../redis/redis.keys";
+
 export const logOutController = asyncHandler(
   async (req: Request, res: Response) => {
+    let accessToken = req.cookies?.accessToken;
+    if (!accessToken && req.headers.authorization?.startsWith("Bearer ")) {
+      accessToken = req.headers.authorization.split(" ")[1];
+    }
+
+    if (accessToken) {
+      try {
+        await redis.set(REDIS_KEYS.TOKEN_BLACKLIST(accessToken), "1", "EX", REDIS_TTL.SESSION);
+      } catch (err) {
+        console.warn("[Redis] Failed to blacklist token:", err);
+      }
+    }
+
     const refreshToken =
       req.cookies?.refreshToken ||
       req.body?.refreshToken ||

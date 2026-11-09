@@ -16,6 +16,8 @@ import AssociationModel, {
 import MemberModel from "../member/member.model";
 import CommentModel from "../comment/comment.model";
 import { resolveMember } from "../association/association.service";
+import { getJsonCache, setJsonCache, deleteCache } from "../../redis/redis.service";
+import { REDIS_KEYS, REDIS_TTL } from "../../redis/redis.keys";
 
 export const createProjectService = async (
   userId: string,
@@ -405,6 +407,12 @@ export const getProjectAnalyticsService = async (
   workspaceId: string,
   projectId: string,
 ) => {
+  const cacheKey = REDIS_KEYS.PROJECT_ANALYTICS(projectId);
+  const cached = await getJsonCache<{ analytics: any }>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const project = await ProjectModel.findById(projectId);
 
   if (!project || project.workspace.toString() !== workspaceId.toString()) {
@@ -457,9 +465,13 @@ export const getProjectAnalyticsService = async (
     completedTasks: _analytics.completedTasks[0]?.count || 0,
   };
 
-  return {
+  const result = {
     analytics,
   };
+
+  await setJsonCache(cacheKey, result, REDIS_TTL.ANALYTICS);
+
+  return result;
 };
 
 export const updateProjectService = async (
@@ -520,6 +532,11 @@ export const updateProjectService = async (
 
   await project.save();
 
+  await deleteCache(
+    REDIS_KEYS.PROJECT_OVERVIEW(projectId),
+    REDIS_KEYS.PROJECT_ANALYTICS(projectId)
+  );
+
   return { project };
 };
 
@@ -569,6 +586,11 @@ export const assignTeamsToProjectService = async (
 
   await project.save();
 
+  await deleteCache(
+    REDIS_KEYS.PROJECT_OVERVIEW(projectId),
+    REDIS_KEYS.PROJECT_ANALYTICS(projectId)
+  );
+
   return { project };
 };
 
@@ -601,6 +623,11 @@ export const removeTeamFromProjectService = async (
   }
 
   await project.save();
+
+  await deleteCache(
+    REDIS_KEYS.PROJECT_OVERVIEW(projectId),
+    REDIS_KEYS.PROJECT_ANALYTICS(projectId)
+  );
 
   return { project };
 };
@@ -636,6 +663,11 @@ export const deleteProjectService = async (
     scopeId: project._id,
   });
 
+  await deleteCache(
+    REDIS_KEYS.PROJECT_OVERVIEW(projectId),
+    REDIS_KEYS.PROJECT_ANALYTICS(projectId)
+  );
+
   return project;
 };
 
@@ -646,6 +678,12 @@ export const getProjectOverviewService = async (
   workspaceId: string,
   projectId: string,
 ) => {
+  const cacheKey = REDIS_KEYS.PROJECT_OVERVIEW(projectId);
+  const cached = await getJsonCache<any>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const project = await ProjectModel.findOne({
     _id: projectId,
     workspace: workspaceId,
@@ -778,7 +816,7 @@ export const getProjectOverviewService = async (
 
   const headMember = headAssociation?.memberId as any;
 
-  return {
+  const result = {
     project,
     head: headMember
       ? {
@@ -804,6 +842,10 @@ export const getProjectOverviewService = async (
       progressPercentage,
     },
   };
+
+  await setJsonCache(cacheKey, result, REDIS_TTL.ANALYTICS);
+
+  return result;
 };
 
 //********************************

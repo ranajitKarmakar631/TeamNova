@@ -23,6 +23,8 @@ import {
   CreateEmailInviteInput,
   CreateLinkInviteInput,
 } from "./invite.validation";
+import { deleteCache, getJsonCache, setJsonCache } from "../../redis/redis.service";
+import { REDIS_KEYS } from "../../redis/redis.keys";
 
 export const hashToken = (rawToken: string): string => {
   return crypto.createHash("sha256").update(rawToken).digest("hex");
@@ -167,6 +169,12 @@ export const createWorkspaceEmailInviteService = async (
 
 export const getInvitationDetailsService = async (token: string) => {
   const tokenHash = hashToken(token);
+  const cacheKey = REDIS_KEYS.INVITE_DETAILS(tokenHash);
+
+  const cached = await getJsonCache<any>(cacheKey);
+  if (cached) {
+    return cached;
+  }
 
   const invitation = await WorkspaceInvitation.findOne({ tokenHash })
     .populate("workspaceId", "name description")
@@ -215,7 +223,7 @@ export const getInvitationDetailsService = async (token: string) => {
     );
   }
 
-  return {
+  const result = {
     isLegacyCode: false,
     workspace: invitation.workspaceId,
     inviter: invitation.invitedBy,
@@ -225,6 +233,10 @@ export const getInvitationDetailsService = async (token: string) => {
     expiresAt: invitation.expiresAt,
     status: invitation.status,
   };
+
+  await setJsonCache(cacheKey, result, 300);
+
+  return result;
 };
 
 export const acceptInvitationService = async (
@@ -269,6 +281,12 @@ export const acceptInvitationService = async (
 
       user.currentWorkspace = workspace._id;
       await user.save();
+
+      await deleteCache(
+        REDIS_KEYS.WORKSPACE_MEMBER_ROLE(workspace._id.toString(), userId),
+        REDIS_KEYS.WORKSPACE_MEMBERS(workspace._id.toString()),
+        REDIS_KEYS.USER_SESSION(userId)
+      );
 
       return {
         workspaceId: workspace._id,
@@ -366,6 +384,12 @@ export const acceptInvitationService = async (
   user.currentWorkspace = invitation.workspaceId;
   await user.save();
 
+  await deleteCache(
+    REDIS_KEYS.WORKSPACE_MEMBER_ROLE(invitation.workspaceId.toString(), userId),
+    REDIS_KEYS.WORKSPACE_MEMBERS(invitation.workspaceId.toString()),
+    REDIS_KEYS.USER_SESSION(userId)
+  );
+
   return {
     workspaceId: invitation.workspaceId,
     role: invitation.role,
@@ -396,6 +420,10 @@ export const revokeInvitationService = async (
 
   invitation.status = "REVOKED";
   await invitation.save();
+
+  if (invitation.tokenHash) {
+    await deleteCache(REDIS_KEYS.INVITE_DETAILS(invitation.tokenHash));
+  }
 
   return { message: "Invitation revoked successfully" };
 };
