@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Send,
   MessageSquare,
+  Video,
 } from "lucide-react";
 import {
   SidebarGroup,
@@ -58,6 +59,11 @@ export function NavMain() {
       title: "Teams",
       url: `/workspace/${workspaceId}/teams`,
       icon: UsersRound  ,
+    },
+    {
+      title: "Meetings",
+      url: `/workspace/${workspaceId}/meetings`,
+      icon: Video,
     },
     {
       title: "Tasks",

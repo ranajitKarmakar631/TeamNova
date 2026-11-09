@@ -88,6 +88,20 @@ export const Permissions = {
 
   // INVITE
   INVITE_MEMBER: "invite:member",
+
+  // Meetings
+  MEETING_CREATE: "meeting:create",
+  MEETING_CREATE_WORKSPACE: "meeting:create_workspace",
+  MEETING_CREATE_PROJECT: "meeting:create_project",
+  MEETING_CREATE_TEAM: "meeting:create_team",
+  MEETING_CREATE_CUSTOM: "meeting:create_custom",
+  MEETING_UPDATE: "meeting:update",
+  MEETING_CANCEL: "meeting:cancel",
+  MEETING_MANAGE_ATTENDEES: "meeting:manage_attendees",
+  MEETING_MANAGE_AGENDA: "meeting:manage_agenda",
+  MEETING_ADD_DISCUSSION_TOPIC: "meeting:add_discussion_topic",
+  MEETING_MANAGE_MINUTES: "meeting:manage_minutes",
+  MEETING_MANAGE_ACTION_ITEMS: "meeting:manage_action_items",
 } as const;
 
 export type PermissionType =
@@ -131,8 +145,20 @@ export const WorkspaceRolePermissions: Record<
     Permissions.TASK_UPDATE,
     Permissions.TASK_DELETE,
 
-
     Permissions.INVITE_MEMBER,
+
+    Permissions.MEETING_CREATE,
+    Permissions.MEETING_CREATE_WORKSPACE,
+    Permissions.MEETING_CREATE_PROJECT,
+    Permissions.MEETING_CREATE_TEAM,
+    Permissions.MEETING_CREATE_CUSTOM,
+    Permissions.MEETING_UPDATE,
+    Permissions.MEETING_CANCEL,
+    Permissions.MEETING_MANAGE_ATTENDEES,
+    Permissions.MEETING_MANAGE_AGENDA,
+    Permissions.MEETING_ADD_DISCUSSION_TOPIC,
+    Permissions.MEETING_MANAGE_MINUTES,
+    Permissions.MEETING_MANAGE_ACTION_ITEMS,
   ],
 
   [WorkspaceRoles.ADMIN]: [
@@ -162,6 +188,19 @@ export const WorkspaceRolePermissions: Record<
     Permissions.TASK_DELETE,
 
     Permissions.INVITE_MEMBER,
+
+    Permissions.MEETING_CREATE,
+    Permissions.MEETING_CREATE_WORKSPACE,
+    Permissions.MEETING_CREATE_PROJECT,
+    Permissions.MEETING_CREATE_TEAM,
+    Permissions.MEETING_CREATE_CUSTOM,
+    Permissions.MEETING_UPDATE,
+    Permissions.MEETING_CANCEL,
+    Permissions.MEETING_MANAGE_ATTENDEES,
+    Permissions.MEETING_MANAGE_AGENDA,
+    Permissions.MEETING_ADD_DISCUSSION_TOPIC,
+    Permissions.MEETING_MANAGE_MINUTES,
+    Permissions.MEETING_MANAGE_ACTION_ITEMS,
   ],
 
   [WorkspaceRoles.MANAGER]: [
@@ -180,6 +219,19 @@ export const WorkspaceRolePermissions: Record<
     Permissions.TASK_CREATE,
     Permissions.TASK_UPDATE,
     Permissions.TASK_DELETE,
+
+    Permissions.MEETING_CREATE,
+    Permissions.MEETING_CREATE_WORKSPACE,
+    Permissions.MEETING_CREATE_PROJECT,
+    Permissions.MEETING_CREATE_TEAM,
+    Permissions.MEETING_CREATE_CUSTOM,
+    Permissions.MEETING_UPDATE,
+    Permissions.MEETING_CANCEL,
+    Permissions.MEETING_MANAGE_ATTENDEES,
+    Permissions.MEETING_MANAGE_AGENDA,
+    Permissions.MEETING_ADD_DISCUSSION_TOPIC,
+    Permissions.MEETING_MANAGE_MINUTES,
+    Permissions.MEETING_MANAGE_ACTION_ITEMS,
   ],
 
   [WorkspaceRoles.EMPLOYEE]: [
@@ -194,6 +246,10 @@ export const WorkspaceRolePermissions: Record<
     Permissions.TASK_READ,
     Permissions.TASK_CREATE,
     Permissions.TASK_UPDATE,
+
+    Permissions.MEETING_CREATE,
+    Permissions.MEETING_CREATE_CUSTOM,
+    Permissions.MEETING_ADD_DISCUSSION_TOPIC,
   ],
 };
 
@@ -213,6 +269,17 @@ export const AssociationRolePermissions: Record<
     Permissions.TASK_CREATE,
     Permissions.TASK_UPDATE,
     Permissions.TASK_DELETE,
+
+    Permissions.MEETING_CREATE,
+    Permissions.MEETING_CREATE_PROJECT,
+    Permissions.MEETING_CREATE_TEAM,
+    Permissions.MEETING_UPDATE,
+    Permissions.MEETING_CANCEL,
+    Permissions.MEETING_MANAGE_ATTENDEES,
+    Permissions.MEETING_MANAGE_AGENDA,
+    Permissions.MEETING_ADD_DISCUSSION_TOPIC,
+    Permissions.MEETING_MANAGE_MINUTES,
+    Permissions.MEETING_MANAGE_ACTION_ITEMS,
   ],
 
   [AssociationRoles.LEAD]: [
@@ -224,6 +291,16 @@ export const AssociationRolePermissions: Record<
     Permissions.TASK_READ,
     Permissions.TASK_CREATE,
     Permissions.TASK_UPDATE,
+
+    Permissions.MEETING_CREATE,
+    Permissions.MEETING_CREATE_PROJECT,
+    Permissions.MEETING_CREATE_TEAM,
+    Permissions.MEETING_UPDATE,
+    Permissions.MEETING_MANAGE_ATTENDEES,
+    Permissions.MEETING_MANAGE_AGENDA,
+    Permissions.MEETING_ADD_DISCUSSION_TOPIC,
+    Permissions.MEETING_MANAGE_MINUTES,
+    Permissions.MEETING_MANAGE_ACTION_ITEMS,
   ],
 
   [AssociationRoles.MEMBER]: [
@@ -234,5 +311,7 @@ export const AssociationRolePermissions: Record<
     Permissions.TASK_READ,
     Permissions.TASK_CREATE,
     Permissions.TASK_UPDATE,
+
+    Permissions.MEETING_ADD_DISCUSSION_TOPIC,
   ],
 };

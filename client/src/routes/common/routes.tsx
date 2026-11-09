@@ -13,6 +13,7 @@ import Teams from "@/page/workspace/Teams";
 import TeamDetails from "@/page/workspace/TeamDetails";
 import SendInvite from "@/page/workspace/SendInvite";
 import ChatPage from "@/chat/Page";
+import MeetingsPage from "@/page/workspace/Meetings";
 
 export const authenticationRoutePaths = [
   { path: AUTH_ROUTES.SIGN_IN, element: <SignIn /> },
@@ -29,6 +30,7 @@ export const protectedRoutePaths = [
   {path: PROTECTED_ROUTES.PROJECTS, element: <Projects />},
   {path: PROTECTED_ROUTES.TEAMS, element: <Teams />},
   {path: PROTECTED_ROUTES.TEAM_DETAILS, element: <TeamDetails />},
+  {path: PROTECTED_ROUTES.MEETINGS, element: <MeetingsPage />},
   {path: PROTECTED_ROUTES.INVITE, element: <SendInvite />},
   {path: PROTECTED_ROUTES.CHAT, element: <ChatPage />}
 ];

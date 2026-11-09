@@ -18,6 +18,7 @@ export const PROTECTED_ROUTES = {
   PROJECTS: '/workspace/:workspaceId/projects',
   TEAMS: "/workspace/:workspaceId/teams",
   TEAM_DETAILS: "/workspace/:workspaceId/team/:teamId",
+  MEETINGS: "/workspace/:workspaceId/meetings",
   INVITE: '/workspace/:workspaceId/send-invite',
   CHAT: '/workspace/:workspaceId/chat',
 };

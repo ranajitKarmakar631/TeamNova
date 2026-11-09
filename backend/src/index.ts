@@ -28,6 +28,12 @@ import {
   closeNotificationWorker,
   closeNotificationQueue,
 } from "./modules/notification";
+import {
+  meetingRoutes,
+  initMeetingWorker,
+  closeMeetingWorker,
+  closeMeetingReminderQueue,
+} from "./modules/meeting";
 
 import { sendEmail } from "./config/sendMail";
 import { redis } from "./redis/redis.service";
@@ -85,6 +91,7 @@ app.use(`${BASE_PATH}/invites`, inviteRoutes);
 app.use(`${BASE_PATH}/associations`, isAuthenticated, associationRoutes);
 app.use(`${BASE_PATH}/teams`, isAuthenticated, teamRoute);
 app.use(`${BASE_PATH}/notifications`, isAuthenticated, notificationRoutes);
+app.use(`${BASE_PATH}/meetings`, isAuthenticated, meetingRoutes);
 
 // Backward-compatible singular mounts
 app.use(`${BASE_PATH}/user`, isAuthenticated, userRoutes);
@@ -97,6 +104,7 @@ app.use(`${BASE_PATH}/invite`, inviteRoutes);
 app.use(`${BASE_PATH}/association`, isAuthenticated, associationRoutes);
 app.use(`${BASE_PATH}/team`, isAuthenticated, teamRoute);
 app.use(`${BASE_PATH}/notification`, isAuthenticated, notificationRoutes);
+app.use(`${BASE_PATH}/meeting`, isAuthenticated, meetingRoutes);
 
 // --------------------------------------------------
 // Global error handler
@@ -129,7 +137,10 @@ const startServer = async (): Promise<void> => {
     // 4. Initialize Notification Queue Worker
     initNotificationWorker();
 
-    // 5. Start HTTP and Socket.IO on the same port
+    // 5. Initialize Meeting Reminder Queue Worker
+    initMeetingWorker();
+
+    // 6. Start HTTP and Socket.IO on the same port
     server.listen(config.PORT, () => {
       console.log(
         `Server listening on port ${config.PORT} in ${config.NODE_ENV}`,
@@ -139,6 +150,8 @@ const startServer = async (): Promise<void> => {
   } catch (error) {
     console.error("Server startup failed:", error);
 
+    await closeMeetingWorker().catch(() => undefined);
+    await closeMeetingReminderQueue().catch(() => undefined);
     await closeNotificationWorker().catch(() => undefined);
     await closeNotificationQueue().catch(() => undefined);
     await redis.quit().catch(() => undefined);
@@ -150,6 +163,8 @@ const startServer = async (): Promise<void> => {
 const gracefulShutdown = async (signal: string): Promise<void> => {
   console.log(`Received ${signal}. Shutting down gracefully...`);
   try {
+    await closeMeetingWorker();
+    await closeMeetingReminderQueue();
     await closeNotificationWorker();
     await closeNotificationQueue();
     await redis.quit().catch(() => undefined);
