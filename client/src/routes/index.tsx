@@ -1,4 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { NuqsAdapter } from "nuqs/adapters/react-router";
 import ProtectedRoute from "./protected.route";
 import AuthRoute from "./auth.route";
 import WorkspaceRedirect from "./workspace.redirect";
@@ -16,55 +17,57 @@ import AddWorkspace from "@/components/add-workspace";
 function AppRoutes() {
   return (
     <BrowserRouter>
-      <Routes>
-        {/* Base / Public layout routes */}
-        <Route element={<BaseLayout />}>
-          {baseRoutePaths.map((route) => (
-            <Route key={route.path} path={route.path} element={route.element} />
-          ))}
-        </Route>
-
-        {/* Authentication routes */}
-        <Route element={<AuthRoute />}>
+      <NuqsAdapter>
+        <Routes>
+          {/* Base / Public layout routes */}
           <Route element={<BaseLayout />}>
-            {authenticationRoutePaths.map((route) => (
-              <Route
-                key={route.path}
-                path={route.path}
-                element={route.element}
-              />
+            {baseRoutePaths.map((route) => (
+              <Route key={route.path} path={route.path} element={route.element} />
             ))}
           </Route>
-        </Route>
 
-        {/* Protected routes */}
-        <Route element={<ProtectedRoute />}>
-          {/* If user visits /workspace directly, redirect to /workspace/:workspaceId or CREATE_WORKSPACE */}
-          <Route path="/workspace" element={<WorkspaceRedirect />} />
-
-          {/* Standalone create workspace page */}
-          <Route element={<BaseLayout />}>
-            <Route
-              path={PROTECTED_ROUTES.CREATE_WORKSPACE}
-              element={<AddWorkspace />}
-            />
+          {/* Authentication routes */}
+          <Route element={<AuthRoute />}>
+            <Route element={<BaseLayout />}>
+              {authenticationRoutePaths.map((route) => (
+                <Route
+                  key={route.path}
+                  path={route.path}
+                  element={route.element}
+                />
+              ))}
+            </Route>
           </Route>
 
-          {/* Workspace app layout routes */}
-          <Route element={<AppLayout />}>
-            {protectedRoutePaths.map((route) => (
+          {/* Protected routes */}
+          <Route element={<ProtectedRoute />}>
+            {/* If user visits /workspace directly, redirect to /workspace/:workspaceId or CREATE_WORKSPACE */}
+            <Route path="/workspace" element={<WorkspaceRedirect />} />
+
+            {/* Standalone create workspace page */}
+            <Route element={<BaseLayout />}>
               <Route
-                key={route.path}
-                path={route.path}
-                element={route.element}
+                path={PROTECTED_ROUTES.CREATE_WORKSPACE}
+                element={<AddWorkspace />}
               />
-            ))}
-          </Route>
-        </Route>
+            </Route>
 
-        {/* Catch-all for undefined routes */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+            {/* Workspace app layout routes */}
+            <Route element={<AppLayout />}>
+              {protectedRoutePaths.map((route) => (
+                <Route
+                  key={route.path}
+                  path={route.path}
+                  element={route.element}
+                />
+              ))}
+            </Route>
+          </Route>
+
+          {/* Catch-all for undefined routes */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </NuqsAdapter>
     </BrowserRouter>
   );
 }

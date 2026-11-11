@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { useAuth } from "@/features/auth";
@@ -93,7 +93,7 @@ export const TaskView: React.FC<TaskViewProps> = ({ projectId: propProjectId }) 
   const totalCount = data?.pagination?.totalCount || tasks.length;
   const completedTasks = tasks.filter((t) => t.status === "DONE").length;
 
-  const columns = getColumns(projectId);
+  const columns = useMemo(() => getColumns(projectId), [projectId]);
 
   return (
     <div className="w-full space-y-3">
@@ -139,7 +139,7 @@ export const TaskView: React.FC<TaskViewProps> = ({ projectId: propProjectId }) 
         <div className="w-full relative">
           {/* Top progress indicator when refetching list */}
           {isRefetching && (
-            <div className="relative w-full h-1 bg-muted rounded-full overflow-hidden mb-2">
+            <div className="absolute -top-1 left-0 right-0 z-10 w-full h-1 bg-muted rounded-full overflow-hidden pointer-events-none">
               <div className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-primary animate-[pulse_1s_ease-in-out_infinite] w-full rounded-full" />
             </div>
           )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +19,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { TaskPriorityEnum } from "@/constant";
-import useDebounce from "@/hooks/use-debounce";
+import useDebouncedKeywordFilter from "@/hooks/use-debounced-keyword-filter";
 
 interface FilterState {
   keyword?: string | null;
@@ -56,25 +56,19 @@ export const TaskBoardFilterToolbar: React.FC<TaskBoardFilterToolbarProps> = ({
   recentlyUpdated,
   setRecentlyUpdated,
 }) => {
-  const [searchValue, setSearchValue] = useState(filters.keyword || "");
-  const debouncedSearch = useDebounce(searchValue, 300);
-
-  useEffect(() => {
-    setSearchValue(filters.keyword || "");
-  }, [filters.keyword]);
-
-  useEffect(() => {
-    setFilters((prev: FilterState) => {
-      const nextKeyword = debouncedSearch ? debouncedSearch : null;
-      if ((nextKeyword || null) !== (prev.keyword || null)) {
-        return {
-          ...prev,
-          keyword: nextKeyword,
-        };
-      }
-      return prev;
-    });
-  }, [debouncedSearch, setFilters]);
+  const [searchValue, setSearchValue] = useDebouncedKeywordFilter({
+    keyword: filters.keyword,
+    onKeywordChange: (nextKeyword) =>
+      setFilters((prev: FilterState) =>
+        (prev.keyword || null) === nextKeyword
+          ? prev
+          : {
+              ...prev,
+              keyword: nextKeyword,
+            }
+      ),
+    delay: 300,
+  });
 
   // By default, filter to current user's tasks
   const isOnlyMyTasks =
@@ -249,7 +243,7 @@ export const TaskBoardFilterToolbar: React.FC<TaskBoardFilterToolbarProps> = ({
                   <ChevronDown className="w-3 h-3 shrink-0 opacity-60" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48 text-xs max-h-60 overflow-y-auto">
+              <DropdownMenuContent align="start" className="w-48 text-xs max-h-60 overflow-y-auto scrollbar-no-track">
                 <DropdownMenuItem onClick={() => handleProjectSelect(null)}>
                   All Projects
                 </DropdownMenuItem>
@@ -284,7 +278,7 @@ export const TaskBoardFilterToolbar: React.FC<TaskBoardFilterToolbarProps> = ({
                   <ChevronDown className="w-3 h-3 shrink-0 opacity-60" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-44 text-xs max-h-60 overflow-y-auto">
+              <DropdownMenuContent align="start" className="w-44 text-xs max-h-60 overflow-y-auto scrollbar-no-track">
                 <DropdownMenuItem onClick={() => handleTeamSelect(null)}>
                   All Teams
                 </DropdownMenuItem>

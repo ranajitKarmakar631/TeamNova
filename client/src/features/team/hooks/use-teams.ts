@@ -26,7 +26,8 @@ export const useTeamsQuery = (
       status,
       projectId,
       pageNumber,
-      pageSize
+      pageSize,
+      onlyMyTeams
     ),
     queryFn: () =>
       getAllTeamsApi({

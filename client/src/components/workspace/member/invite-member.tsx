@@ -1063,7 +1063,7 @@ export const InviteMember = () => {
                 </div>
 
                 {/* Audit Trail Table */}
-                <div className="overflow-x-auto min-h-[300px]">
+                <div className="overflow-x-auto scrollbar-custom-track min-h-[300px]">
                   {isInvitationsLoading ? (
                     <div className="flex justify-center items-center py-20">
                       <Loader className="w-6 h-6 animate-spin text-slate-400" />

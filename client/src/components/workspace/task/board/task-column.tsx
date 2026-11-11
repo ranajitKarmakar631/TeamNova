@@ -112,7 +112,7 @@ export const TaskColumn: React.FC<TaskColumnProps> = ({
       </div>
 
       {/* Cards Scroll Area */}
-      <div className="flex-1 min-h-[320px] max-h-[calc(100vh-280px)] overflow-y-auto space-y-2.5 px-0.5 py-1">
+      <div className="flex-1 min-h-[320px] max-h-[calc(100vh-280px)] overflow-y-auto scrollbar-no-track space-y-2.5 px-0.5 py-1">
         {/* Render Drop indicator at the top if target column is empty or dragged from another column */}
         {isDraggingFromOther && tasks.length === 0 && (
           <div className="border-2 border-dashed border-primary/60 bg-primary/5 rounded-xl p-5 flex flex-col items-center justify-center gap-2 text-primary text-xs font-semibold my-1 transition-all animate-in fade-in zoom-in-95 duration-150">

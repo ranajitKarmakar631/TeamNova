@@ -1,10 +1,21 @@
 export const projectKeys = {
   all: ["projects"] as const,
   lists: () => [...projectKeys.all, "list"] as const,
-  list: (workspaceId: string, pageNumber?: number, pageSize?: number, keyword?: string) =>
-    ["allprojects", workspaceId, pageNumber, pageSize, keyword].filter(
-      (v) => v !== undefined
-    ),
+  list: (
+    workspaceId: string,
+    pageNumber?: number,
+    pageSize?: number,
+    keyword?: string,
+    onlyMyProjects?: boolean
+  ) =>
+    [
+      "allprojects",
+      workspaceId,
+      pageNumber,
+      pageSize,
+      keyword,
+      onlyMyProjects ? "my" : undefined,
+    ].filter((v) => v !== undefined),
   allProjectsInWorkspace: (workspaceId: string) => ["allprojects", workspaceId] as const,
   details: () => [...projectKeys.all, "detail"] as const,
   detail: (projectId: string) => ["singleProject", projectId] as const,

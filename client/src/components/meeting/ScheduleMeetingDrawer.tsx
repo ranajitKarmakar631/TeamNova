@@ -239,7 +239,7 @@ export const ScheduleMeetingDrawer: React.FC<ScheduleMeetingDrawerProps> = ({
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-2xl md:max-w-3xl overflow-y-auto p-6 flex flex-col gap-6"
+        className="w-full sm:max-w-2xl md:max-w-3xl overflow-y-auto scrollbar-custom-track p-6 flex flex-col gap-6"
       >
         <SheetHeader className="text-left pb-3 border-b">
           <div className="flex items-center gap-2 text-primary font-semibold text-lg">
@@ -431,7 +431,7 @@ export const ScheduleMeetingDrawer: React.FC<ScheduleMeetingDrawerProps> = ({
             {audience === "MULTIPLE_TEAMS" && (
               <div className="space-y-2 p-3 rounded-lg border bg-muted/20">
                 <Label className="text-xs font-medium">Select Teams</Label>
-                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto scrollbar-no-track">
                   {teams.map((t: any) => {
                     const isChecked = teamIds.includes(t._id);
                     return (
@@ -472,7 +472,7 @@ export const ScheduleMeetingDrawer: React.FC<ScheduleMeetingDrawerProps> = ({
                   />
                 </div>
 
-                <div className="max-h-44 overflow-y-auto space-y-1 divide-y divide-border/40">
+                <div className="max-h-44 overflow-y-auto scrollbar-no-track space-y-1 divide-y divide-border/40">
                   {filteredMembers.map((m: any) => {
                     const u = m.userId;
                     if (!u) return null;

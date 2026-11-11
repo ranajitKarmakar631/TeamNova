@@ -278,7 +278,7 @@ export const MeetingDetailsDrawer: React.FC<MeetingDetailsDrawerProps> = ({
       <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <SheetContent
           side="right"
-          className="w-full sm:max-w-3xl md:max-w-4xl overflow-y-auto p-6 flex flex-col gap-6"
+          className="w-full sm:max-w-3xl md:max-w-4xl overflow-y-auto scrollbar-custom-track p-6 flex flex-col gap-6"
         >
           {isLoading || !meeting ? (
             <div className="flex-1 flex items-center justify-center py-20">
@@ -845,7 +845,7 @@ export const MeetingDetailsDrawer: React.FC<MeetingDetailsDrawerProps> = ({
                   {showAddMember && (
                     <div className="p-3 border rounded-lg bg-muted/20 space-y-2 text-xs">
                       <Label className="font-semibold">Select Workspace Members to Invite</Label>
-                      <div className="max-h-40 overflow-y-auto space-y-1">
+                      <div className="max-h-40 overflow-y-auto scrollbar-no-track space-y-1">
                         {members.map((m: any) => {
                           const u = m.userId;
                           if (!u) return null;

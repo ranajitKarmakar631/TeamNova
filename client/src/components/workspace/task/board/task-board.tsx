@@ -220,7 +220,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
   // Initial loading skeleton
   if (isLoading && tasks.length === 0) {
     return (
-      <div className="flex gap-4 overflow-x-auto pb-4 pt-1">
+      <div className="flex gap-4 overflow-x-auto scrollbar-custom-track pb-4 pt-1">
         {COLUMNS.map((col) => (
           <div
             key={col.id}
@@ -249,14 +249,14 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({
     <div className="relative w-full">
       {/* Sleek top indeterminate progress line during refetching ("anti-jhatka") */}
       {isRefetching && (
-        <div className="relative w-full h-1 bg-muted/60 rounded-full overflow-hidden mb-3 animate-in fade-in duration-150">
+        <div className="absolute -top-1 left-0 right-0 z-10 w-full h-1 bg-muted/60 rounded-full overflow-hidden animate-in fade-in duration-150 pointer-events-none">
           <div className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-primary animate-[pulse_1s_ease-in-out_infinite] w-full rounded-full" />
         </div>
       )}
 
       {/* Columns Grid */}
       <div
-        className={`flex gap-4 overflow-x-auto pb-6 pt-1 items-start transition-opacity duration-200 select-none ${
+        className={`flex gap-4 overflow-x-auto scrollbar-custom-track pb-6 pt-1 items-start transition-opacity duration-200 select-none ${
           isRefetching ? "opacity-85 pointer-events-auto" : "opacity-100"
         }`}
       >

@@ -497,7 +497,7 @@ export default function EditTaskForm({
                             <Loader className="w-4 h-4 animate-spin text-muted-foreground" />
                           </div>
                         )}
-                        <div className="w-full max-h-[200px] overflow-y-auto scrollbar">
+                        <div className="w-full max-h-[200px] overflow-y-auto scrollbar-no-track">
                           {!isTeamLeadOnly && (
                             <SelectItem value="none">
                               No Team (Project Task)
@@ -634,7 +634,7 @@ export default function EditTaskForm({
                               }
                               className="h-8 text-xs"
                             />
-                            <div className="max-h-[220px] overflow-y-auto space-y-1">
+                            <div className="max-h-[220px] overflow-y-auto scrollbar-no-track space-y-1">
                               {isLoadingMembers && (
                                 <div className="p-4 text-center">
                                   <Loader className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
@@ -747,7 +747,7 @@ export default function EditTaskForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <div className="w-full max-h-[200px] overflow-y-auto scrollbar">
+                        <div className="w-full max-h-[200px] overflow-y-auto scrollbar-no-track">
                           <SelectItem value="none">None / Direct</SelectItem>
                           {eligibleReporters.map((reporter) => {
                             const rName = reporter.user?.name || "Unknown";

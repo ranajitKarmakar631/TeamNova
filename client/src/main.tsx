@@ -1,6 +1,5 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { NuqsAdapter } from "nuqs/adapters/react";
 import { Provider } from "react-redux";
 
 import "./index.css";
@@ -13,9 +12,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Provider store={store}>
       <QueryProvider>
-        <NuqsAdapter>
-          <App />
-        </NuqsAdapter>
+        <App />
         <Toaster />
       </QueryProvider>
     </Provider>

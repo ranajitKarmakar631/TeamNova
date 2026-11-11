@@ -1,9 +1,11 @@
 import { parseAsString, useQueryStates } from "nuqs";
 
+const projectFilterParsers = {
+  keyword: parseAsString,
+};
+
 const useProjectTableFilter = () => {
-  return useQueryStates({
-    keyword: parseAsString,
-  });
+  return useQueryStates(projectFilterParsers);
 };
 
 export default useProjectTableFilter;

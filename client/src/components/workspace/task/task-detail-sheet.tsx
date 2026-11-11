@@ -372,7 +372,7 @@ export const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({
         return (
           <div
             key={idx}
-            className="my-1.5 p-2.5 rounded-md bg-muted/60 font-mono text-[11px] text-foreground/90 border border-border/50 overflow-x-auto"
+            className="my-1.5 p-2.5 rounded-md bg-muted/60 font-mono text-[11px] text-foreground/90 border border-border/50 overflow-x-auto scrollbar-no-track"
           >
             {line.replace(/```/g, "")}
           </div>
@@ -484,7 +484,7 @@ export const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({
           </div>
 
           {/* 2. SCROLLABLE BODY */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          <div className="flex-1 overflow-y-auto scrollbar-custom-track px-6 py-5 space-y-6">
             {/* Task Title */}
             <div>
               {isEditingTitle ? (
@@ -616,7 +616,7 @@ export const TaskDetailSheet: React.FC<TaskDetailSheetProps> = ({
                           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-56 max-h-60 overflow-y-auto">
+                      <DropdownMenuContent align="start" className="w-56 max-h-60 overflow-y-auto scrollbar-no-track">
                         <DropdownMenuItem
                           onClick={() => {
                             setSelectedAssignee(null);

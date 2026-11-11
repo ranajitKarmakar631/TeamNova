@@ -1,9 +1,9 @@
-import { FC, useState, useMemo, useEffect } from "react";
+import { FC, useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { X, Search, Shield, UserCheck } from "lucide-react";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import useDebounce from "@/hooks/use-debounce";
+import useDebouncedKeywordFilter from "@/hooks/use-debounced-keyword-filter";
 import useTeamTableFilter from "@/hooks/use-teams-table-filter";
 import { getTeamColumns } from "./team-columns";
 import { DataTable } from "./table";
@@ -103,25 +103,19 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
   setViewFilter,
   myTeamsCount,
 }) => {
-  const [searchValue, setSearchValue] = useState(filters.keyword || "");
-  const debouncedSearch = useDebounce(searchValue, 400);
-
-  useEffect(() => {
-    setSearchValue(filters.keyword || "");
-  }, [filters.keyword]);
-
-  useEffect(() => {
-    setFilters((prev) => {
-      const nextKeyword = debouncedSearch || null;
-      if ((nextKeyword || null) !== (prev.keyword || null)) {
-        return {
-          ...prev,
-          keyword: nextKeyword,
-        };
-      }
-      return prev;
-    });
-  }, [debouncedSearch, setFilters]);
+  const [searchValue, setSearchValue] = useDebouncedKeywordFilter({
+    keyword: filters.keyword,
+    onKeywordChange: (nextKeyword) =>
+      setFilters((prev) =>
+        (prev.keyword || null) === nextKeyword
+          ? prev
+          : {
+              ...prev,
+              keyword: nextKeyword,
+            }
+      ),
+    delay: 400,
+  });
 
   const handleFilterChange = (key: keyof Filters, values: string[]) => {
     setFilters({

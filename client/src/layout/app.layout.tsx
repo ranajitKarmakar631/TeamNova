@@ -13,7 +13,7 @@ const AppLayout = () => {
       <SocketProvider>
         <SidebarProvider>
           <Asidebar />
-          <SidebarInset className="overflow-x-hidden">
+          <SidebarInset className="min-w-0 overflow-x-hidden">
             <div className="w-full">
               <>
                 <Header />

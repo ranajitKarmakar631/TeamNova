@@ -19,7 +19,13 @@ export const useProjectsQuery = (
   >
 ) => {
   return useQuery<AllProjectResponseType, CustomError>({
-    queryKey: projectKeys.list(workspaceId, pageNumber, pageSize, keyword),
+    queryKey: projectKeys.list(
+      workspaceId,
+      pageNumber,
+      pageSize,
+      keyword,
+      onlyMyProjects
+    ),
     queryFn: () =>
       getProjectsInWorkspaceApi({
         workspaceId,

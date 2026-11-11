@@ -99,9 +99,15 @@ export const MeetingsPage = () => {
   };
 
   return (
-    <main className="flex flex-1 flex-col py-4 md:pt-3 space-y-6">
+    <main
+      className={`flex flex-1 flex-col ${
+        activeTab === "calendar"
+          ? "pt-2 md:pt-1 pb-0 space-y-4 md:h-[calc(100svh-4.75rem)] md:overflow-hidden"
+          : "py-4 md:pt-3 space-y-6"
+      }`}
+    >
       {/* Page Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <CalendarDays className="w-7 h-7 text-primary" />
@@ -160,7 +166,9 @@ export const MeetingsPage = () => {
       </div>
 
       {/* 4 Stat Cards */}
-      <MeetingStatsCards stats={stats} isLoading={isStatsLoading} />
+      <div className="shrink-0">
+        <MeetingStatsCards stats={stats} isLoading={isStatsLoading} />
+      </div>
 
       {/* TAB CONTENT: CALENDAR VIEW */}
       {activeTab === "calendar" ? (
